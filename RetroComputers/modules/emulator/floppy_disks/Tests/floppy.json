@@ -1,0 +1,6 @@
+{
+    "name": "Tests",
+    "filename": "floppy.img",
+    "icon": "default",
+    "readonly": true
+}
