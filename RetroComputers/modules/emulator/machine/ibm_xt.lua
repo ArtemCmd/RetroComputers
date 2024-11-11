@@ -139,12 +139,12 @@ local machine = {}
 local floppy_to_load = {}
 
 local function insert_floppy(floppy, id)
-    floppy_to_load[floppy.filename] = {floppy, id}
+    floppy_to_load[id] = floppy
 end
 
 local function start(self)
     if not self.enebled then
-        logger:info("Starting VM.")
+        logger:info("IBM XT: Starting")
 
         self.cpu.flags = 0x0202
         -- BDA 
@@ -178,8 +178,8 @@ local function start(self)
         -- PC DOS3
         -- insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/hdd3.img", 0x80)
         -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/floppy_disks/PC-DOS3/DISK01.img", 0x00)
-        for path, floppy in pairs(floppy_to_load) do
-            disks.insert_disk(self.cpu, path, floppy[2])
+        for id, floppy in pairs(floppy_to_load) do
+            disks.insert_disk(self.cpu, floppy.filename, id)
         end
         disks.boot_drive(self.cpu, 0x00)
 
