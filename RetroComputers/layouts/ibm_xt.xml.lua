@@ -1,4 +1,5 @@
 ---@diagnostic disable: lowercase-global
+local logger = require("retro_computers:logger")
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local blocks = require("retro_computers:blocks")
 local cp437 = require("retro_computers:emulator/cp437")
@@ -10,7 +11,7 @@ local screen = document.screen
 local cursor = document.cursor
 -- Machine
 local mx, my, mz
-local machine
+local machine = nil
 -- Font
 local glyph_width, glyph_height = 8, 8
 local FONT_SCALE = 1
@@ -36,24 +37,6 @@ local palette = {
     [15] = "#" -- white
 }
 
--- local cga_palette = {
--- 	0x000000,
---     0x0000AA,
---     0x00AA00,
---     0x00AAAA,
--- 	0xAA0000,
---     0xAA00AA,
---     0xAA5500,
---     0xAAAAAA,
--- 	0x555555,
---     0x5555FF,
---     0x55FF55,
---     0x55FFFF,
--- 	0xFF5555,
---     0xFF55FF,
---     0xFFFF55,
---     0xFFFFFF
--- }
 local cga_palette = {
 	{0, 0, 0, 255}, -- black
     {0, 0, 170, 255}, -- blue
@@ -81,19 +64,14 @@ local cga_palette = {
     end
 }
 
--- local function unpack_color(color)
---     local r = band(rshift(color, 16), 0xff);
---     local g = band(rshift(color,  8), 0xff);
---     local b = band((color), 0xff);
---     return {r, g, b, 255}
--- end
-
 function start_vm()
-    if machine.enebled then
-        machine:shutdown()
-        cursor.visible = false
-    else
-        machine:start()
+    if machine then
+        if machine.enebled then
+            machine:shutdown()
+            cursor.visible = false
+        else
+            machine:start()
+        end
     end
 end
 
@@ -102,9 +80,11 @@ function show_keyboard()
 end
 
 function send_ctrl_alt_del()
-    machine.keyboard:send_key("left-ctrl")
-    machine.keyboard:send_key("alt")
-    machine.keyboard:send_key("delete")
+    if machine then
+        machine.keyboard:send_key("left-ctrl")
+        machine.keyboard:send_key("alt")
+        machine.keyboard:send_key("delete")
+    end
 end
 
 function open_inventory()
@@ -127,7 +107,7 @@ local function refresh()
                     if cell then
                         document[index + 1].src = cache[cell[1]]
                         document[index + 1].color = cga_palette[cell[3] + 1]
-                        --document[bg_index + 1].color = cga_palette[char[2] + 1] -- Mnogo lagov
+                        --document[bg_index + 1].color = cga_palette[char[2] + 1]
                     else
                         document[index + 1].color = {0, 0, 0, 255}
                     end
@@ -189,6 +169,8 @@ function on_open(x, y, z)
             is_cached = true
         end
         set_resolution(machine.display.width, machine.display.height)
+    else
+        logger:error("Machine not found!")
     end
 end
 

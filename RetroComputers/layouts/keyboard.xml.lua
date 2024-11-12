@@ -9,7 +9,7 @@ local initilized = false
 local is_pressed = input.is_pressed
 local machine = nil
 
-local function update_virtual_keyboard()
+local function update_keyboard()
     local mouse_pos = input.get_mouse_pos()
     local keyboard = document.sc_keyboard
 
@@ -59,12 +59,12 @@ end
 function on_open()
     local keyboard = document.sc_keyboard
     if not initilized then
-        keyboard:setInterval(config.screen_keyboard_delay, update_virtual_keyboard)
+        keyboard:setInterval(config.screen_keyboard_delay, update_keyboard)
         initilized = true
     end
     local viewport = gui.get_viewport()
     keyboard.pos = {viewport[1] / 2 - keyboard.size[1] / 2, viewport[2] / 2 - keyboard.size[2] / 2}
-    machine = vmmanager.get_machine(1)
+    machine = vmmanager.get_current_machine()
     if machine then
         machine.is_focused = false
     end

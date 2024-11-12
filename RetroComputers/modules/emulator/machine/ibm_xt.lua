@@ -8,12 +8,6 @@ local ram_rom = {}
 
 local function get_save_path(id)
     local path =  "world:data/retro_computers/machines/"
-    if not file.exists("world:data/retro_computers") then
-        file.mkdir("world:data/retro_computers")
-    end
-    if not file.exists(path) then
-        file.mkdir(path)
-    end
     if not file.exists(path .. id) then
         file.mkdir(path .. id)
     end
@@ -280,8 +274,9 @@ local function save(self)
         loaded_drives = {}
     }
 
-    for _, drive in pairs(floppy_to_load) do
-        machine.loaded_drives[#machine.loaded_drives+1] = {drive[1].name, drive[2]}
+    for id, drive in pairs(floppy_to_load) do
+        print(drive)
+        machine.loaded_drives[#machine.loaded_drives+1] = {drive.name, id}
     end
     file.write(get_save_path(self.id) .. "machine.json", json.tostring(machine, false))
 end

@@ -1,12 +1,11 @@
 local logger = require("retro_computers:logger")
 
 local config = {}
-local global_path = pack.data_file("retro_computers", "config.json")
-local local_path = pack.shared_file("retro_computers", "config.json")
+local global_path = pack.shared_file("retro_computers", "config.json")
+local local_path = pack.data_file("retro_computers", "config.json")
 local default = {
     screen_keyboard_delay = 80,
-    -- ibm_xt_use_ega = true
-    -- bios_tests_enable = false
+    floppy_paths = {"retro_computers:modules/emulator/floppy_disks"}
 }
 
 function config.save()
@@ -23,7 +22,7 @@ end
 function config.load()
     logger:info("Config: Loading")
 
-    local data
+    local data = {}
     if file.exists(local_path) then
         -- logger:debug("Config: Local loaded")
         data = json.parse(file.read(local_path))
@@ -44,7 +43,7 @@ function config.load()
             else
                 logger:error("Config: Unknown key %s", tostring(key))
             end
-        end,
+        end
     })
 end
 

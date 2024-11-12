@@ -4,9 +4,16 @@ local vmmanager = require("retro_computers:emulator/vmmanager")
 local ibm_xt =  require("retro_computers:emulator/machine/ibm_xt")
 local blocks = require("retro_computers:blocks")
 local drive_manager = require("retro_computers:emulator/drive_manager")
--- local font_manager = require("customfont:font_manager")
 
 function on_world_open()
+    local path =  "world:data/retro_computers/"
+    if not file.exists(path) then
+        file.mkdir(path)
+    end
+    if not file.exists(path .. "machines") then
+        file.mkdir(path .. "machines")
+    end
+
     config.load()
     blocks.load()
     drive_manager.load_floppys()
@@ -20,7 +27,7 @@ function on_world_tick()
 end
 
 function on_world_save()
-    vmmanager.save()
     logger.save()
     blocks.save()
+    vmmanager.save()
 end

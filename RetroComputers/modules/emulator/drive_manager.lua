@@ -1,10 +1,8 @@
 local logger = require("retro_computers:logger")
+local config = require("retro_computers:config")
 
 local manager = {}
-local searcher_paths =
-{
-    "retro_computers:modules/emulator/floppy_disks"
-}
+local searcher_paths = {}
 local lastid = 1
 local floppys = {}
 local items_path = "retro_computers:items/"
@@ -36,6 +34,7 @@ end
 
 function manager.load_floppys()
     logger:info("DriveManager: Loading floppy disks...")
+    searcher_paths = config.floppy_paths
     for _, path in pairs(searcher_paths) do
         if file.exists(path) then
             local dirs = file.list(path)

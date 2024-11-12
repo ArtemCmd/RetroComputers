@@ -36,7 +36,7 @@ function blocks.load()
 end
 
 function blocks.save()
-    file.write(PATH, json.tostring(list, true))
+    file.write(PATH, json.tostring(list, false))
 end
 
 return blocks

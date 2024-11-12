@@ -1,6 +1,6 @@
 -- TODO: Add all ascii codes
 
--- local logger = require("retro_computers:logger")
+local logger = require("retro_computers:logger")
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
 local is_pressed = input.is_pressed
 
@@ -78,18 +78,17 @@ local keycodes = {
     ["="] = {ascii = 92, code = 0x0D}
 }
 
-local kbd_port_b = 0x03
-local kbd_spkr_latch = 0
-
-local kbd_status = 0x10
-local kbd_a2 = 0
+local status = 0x10
+local speaker_enebled = 0
+local port_data = 0x03
+local reg = 0
 
 local function send(self, char, code)
     table.insert(charqueue, {code, char})
     self.cpu:emit_interrupt(9, false)
 end
 
-local mat = {}
+local matrix = {}
 local function update_keys(self)
     local bufkey = buffer[1]
     for value, key in pairs(keycodes) do
@@ -101,12 +100,12 @@ local function update_keys(self)
             key.pressed = false
         end
 
-        if key.pressed and not mat[key.code] then
-            mat[key.code] = true
+        if key.pressed and not matrix[key.code] then
+            matrix[key.code] = true
             send(self, key.ascii, key.code)
             -- logger:debug("Keyboard XT: Key %d pressed", key.code)
-        elseif not key.pressed and mat[key.code] then
-            mat[key.code] = false
+        elseif not key.pressed and matrix[key.code] then
+            matrix[key.code] = false
             send(self, key.ascii,  bor(0x80, key.code))
             -- logger:debug("Keyboard XT: Key %d realesed", key.code)
         end
@@ -131,38 +130,41 @@ end
 
 -- Keyboard ports
 local function port_60(cpu, port, val)
-	if not val then -- Read
-        --logger:debug("Keyboard XT: Port 60: Reading key.")
+	if val then
+
+	else
+        -- logger:debug("Keyboard XT: Port 60: Reading key.")
         if #charqueue > 0 then
 			local v = table.remove(charqueue, 1)
 			return v[1]
 		end
         return 0xFF
-	else
-        return 0x00
 	end
 end
 
 local function port_61(cpu, port, val)
-	if not val then
-		return kbd_port_b
+	if val then
+		port_data = val
+        speaker_enebled = band(val, 2)
+        if speaker_enebled then
+            logger:debug("Keyboard XT: Speaker enebled")
+        end
 	else
-		kbd_port_b = val
-		kbd_spkr_latch = bor(kbd_spkr_latch, val)
+        return port_data
 	end
 end
 
 local function port_64(cpu, port,val)
-	if not val then
-		local v = bor(kbd_status, lshift(kbd_a2, 3))
-		if #charqueue > 0 then
-			kbd_status = bxor(kbd_status, 3)
-		else
-			kbd_status = band(kbd_status, 0xFC)
-		end
-		return v
+	if val then
+		reg = 1
 	else
-		kbd_a2 = 1
+        local ret = bor(status, lshift(reg, 3))
+		if #charqueue > 0 then
+			status = bxor(status, 3)
+		else
+			status = band(status, 0xFC)
+		end
+		return ret
 	end
 end
 
