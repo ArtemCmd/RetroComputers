@@ -69,7 +69,7 @@ function on_world_open()
         local name = args[1]
         local val = args[2]
         if config[name] then
-            if type(config) == "number" then
+            if type(config[name]) == "number" then
                 config[name] = val
                 console.log("Key " .. name .. " set to " .. val)
             else

@@ -44,8 +44,8 @@ function config.load()
 
     setmetatable(config, {
         __index = function (t, key)
-            if config[key] then
-                return config[key]
+            if rawget(config, key) then
+                return rawget(config, key)
             elseif default[key] then
                 return default[key]
             else

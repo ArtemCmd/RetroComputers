@@ -58,7 +58,7 @@ local cga_palette = {
 setmetatable(cga_palette, {
     __index = function (t, k)
         if rawget(t, k) then
-            return k
+            return rawget(t, k)
         end
         return {0, 0, 0, 255}
     end
