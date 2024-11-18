@@ -53,16 +53,16 @@ local cga_palette = {
 	{255, 85, 85, 255}, -- light red
     {255, 85, 255, 255}, -- light magenta
     {255, 255, 85, 255}, -- yellow
-    {255, 255, 255, 255}, -- white
-
-    __index = function (t, k)
-        if t[k] then
-            return k
-        else
-            return {0, 0, 0, 255}
-        end
-    end
+    {255, 255, 255, 255} -- white
 }
+setmetatable(cga_palette, {
+    __index = function (t, k)
+        if rawget(t, k) then
+            return k
+        end
+        return {0, 0, 0, 255}
+    end
+})
 
 function start_vm()
     if machine then
@@ -102,7 +102,7 @@ local function refresh()
             for y = 0, height - 1, 1 do
                 for x = 0, width - 1, 1 do
                     local cell = machine.display.buffer[y * width + x] or {0, 0, 15}
-                    local index = y * 80 + x
+                    local index = y * width + x
                     -- local bg_index = width * height + index
                     if cell then
                         document[index + 1].src = cache[cell[1]]

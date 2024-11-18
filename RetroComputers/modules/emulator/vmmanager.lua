@@ -4,6 +4,10 @@ local vmmanager = {}
 local vms = {}
 local current_machine = nil
 
+function vmmanager.get_machines()
+    return vms
+end
+
 function vmmanager.get_next_id()
     return #vms + 1
 end

@@ -754,7 +754,7 @@ local function cpu_in(port)
     local p = io_ports[port]
     -- logger:warning("i8086: Cpu in: port:%02X", port)
     if p == nil then
-        -- logger:warning("i8086: Cpu in: port:%02X not found", port)
+        logger:warning("i8086: Cpu in: port:%02X not found", port)
         return 0xFF
     elseif type(p) == "function" then
         return p(port)
@@ -771,7 +771,7 @@ local function cpu_out(self, port, val)
     elseif p ~= nil then
         io_ports[port+1] = val
     else
-    --    logger:warning("i8086: Cpu out: port:%02X not found", port)
+       logger:warning("i8086: Cpu out: port:%02X not found", port)
     end
 end
 

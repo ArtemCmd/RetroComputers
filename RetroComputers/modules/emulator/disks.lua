@@ -8,7 +8,7 @@ local function get_drives()
     return drives
 end
 
-local function disk_init_data(cpu, drive)
+local function init_disk(cpu, drive)
 	drive.inserted = true
 	if drive.size == 0 then
 		drive.inserted = false
@@ -130,7 +130,6 @@ local function insert_disk(cpu, path, id)
         local drive = {
             id = id,
             floppy = id < 0x80,
-            is_initilized = false,
             inserted = false,
             size = file.length(path),
             path = path,
@@ -138,17 +137,11 @@ local function insert_disk(cpu, path, id)
             readonly = false,
             edited = false
         }
-        function drive:initilize()
-            if self.is_initilized == false then
-                disk_init_data(cpu, self)
-                self.is_initilized = true
-            end
-        end
+        init_disk(cpu, drive)
         drives[id] = drive
         if drive.id >= 0x80 then
             cpu.memory[0x475] = cpu.memory[0x475] + 1
         end
-        -- drive:initilize()
     else
         logger:error("Disks: File %s load error", path)
     end
@@ -279,10 +272,11 @@ local function int_13(cpu, ax,ah,al)
 		if not d then
 			ret_status(cpu, 1)
 		else
-			d:initilize()
 			local maxc = d.cylinders - 1
 			local drives = cpu.memory[0x475]
-			if d.floppy then drives = band(rshift(cpu.memory[0x410], 6), 3) + 1 end
+			if d.floppy then 
+                drives = band(rshift(cpu.memory[0x410], 6), 3) + 1
+            end
 			cpu.regs[2] = bor(bor(lshift(band(maxc, 0xFF), 8), band(d.sectors, 0x3F)), rshift(band(maxc, 0x300), 2)) -- CX = cylinder number | sector number
 			cpu.regs[3] = bor(lshift((d.heads - 1), 8), drives)
 			cpu.regs[8] = 2000 + (drive*16)
@@ -304,8 +298,11 @@ local function int_13(cpu, ax,ah,al)
 		local drive = drives[drive_num]
 		if drive then
             local code = 0
-			if drive.floppy then code = 1
-			else code = 3 end
+			if drive.floppy then
+                code = 1
+			else
+                code = 3
+            end
 
             cpu:clear_flag(0)
 		    cpu.regs[1] = bor(lshift(code, 8), band(cpu.regs[1], 0xFF))
@@ -319,9 +316,6 @@ local function int_13(cpu, ax,ah,al)
 
             ret_status(cpu, 0)
 		else
-            -- cpu.regs[1] = 0
-            -- cpu.regs[2] = 0
-            -- cpu.regs[3] = 0
             ret_status(cpu, 1)
         end
 		return true
@@ -343,7 +337,6 @@ local function disk_boot(cpu, id)
     cpu:register_interrupt_handler(0x13, int_13)
     if drive then
         logger:debug("Disks: Booting from: %02X", id)
-        drive:initilize()
         local f = drive.handler
         f:set_position(0)
         local bootsector = f:read(512)
@@ -360,10 +353,6 @@ end
 
 local disks = {}
 
-function disks:initilize(cpu)
-    cpu.memory[0x475] = 0
-end
-
 function disks.new(cpu)
     local instance = {
         boot_drive = disk_boot,
@@ -371,6 +360,7 @@ function disks.new(cpu)
         get_drives = get_drives
     }
 
+    cpu.memory[0x475] = 0
     return instance
 end
 

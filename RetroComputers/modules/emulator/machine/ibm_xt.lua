@@ -25,7 +25,7 @@ function RAM.new(machine)
             elseif (key < 0xC0000) then
                 return machine.videocard.vram_read(key)
             elseif (key >= 0xF0000 and key < 0x100000) then
-                return ram_rom[key] or 0x00
+                return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0xFF
             else
                 return 0xFF
             end
@@ -36,7 +36,7 @@ function RAM.new(machine)
             elseif (key < 0xC0000) then
                 machine.videocard.vram_write(key, value)
             elseif (key >= 0xF0000 and key < 0x100000) then
-                ram_rom[key] = value
+                ram_rom[band(key, 0xFFFFF) - 0xF0000] = value
             end
         end
     })
@@ -74,7 +74,7 @@ local pit = require("retro_computers:emulator/hardware/i8253")
 local pic = require("retro_computers:emulator/hardware/i8259")
 local rtc = require("retro_computers:emulator/hardware/rtc")
 local cga = require("retro_computers:emulator/hardware/videocards/cga")
-local disks = require("retro_computers:emulator/disks").new()
+local disks = require("retro_computers:emulator/disks")
 local keyboard = require("retro_computers:emulator/hardware/keyboards/keyboard_xt")
 local serial = require("retro_computers:emulator/serial")
 local dma = require("retro_computers:emulator/hardware/i8237")
@@ -168,49 +168,12 @@ local function start(self)
         -- B(floppy) - 0x01
         -- C(hard disk) - 0x80
         -- D(hard disk) - 0x81
-
-        -- PC DOS3
-        -- insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/hdd3.img", 0x80)
-        -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/floppy_disks/PC-DOS3/DISK01.img", 0x00)
         for id, floppy in pairs(floppy_to_load) do
-            disks.insert_disk(self.cpu, floppy.filename, id)
+            self.disks.insert_disk(self.cpu, floppy.filename, id)
         end
-        disks.boot_drive(self.cpu, 0x00)
+        self.disks.boot_drive(self.cpu, 0x00)
 
-        -- ELKS
-        -- insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/hd32-minix.img", 0x80)
-        -- disk_boot(self.cpu, 0x80)
-        -- Программы для тестирования
-        -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/floppy_disks/floppy.img", 0x01)
-        -- insert_disk(self.cpu, "retro_computers:modules/emulator/floppy_disks/TurboPascal.img", 0x01)
-
-        -- BIOS TESTS
-        -- local rom = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/bios2.rom")
-        -- -- local rom2 = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/5000027.u19")
-
-        -- for i = 0, #rom - 1, 1 do
-        --     self.cpu.memory[0xF0000 + i] = band(rom[i + 1], 0xFF)
-        -- end
-
-        -- for i = 0, #rom - 1, 1 do
-        --     self.cpu.memory[0xF8000 + i] = band(rom[i + 1], 0xFF)
-        -- end
-
-        -- self.cpu:port_set(0x201, function (cpu, port, val)
-        --     print(val)
-        --     return 0xFF
-        -- end)
-
-        -- self.cpu:port_set(0x3BA, function (cpu, port, val)
-        --     --logger:debug(val)
-        --     return 0xFF
-        -- end)
-        -- for i = 0, #rom - 1, 1 do
-        --     self.cpu.memory[0xF0000 + i] = band(rom2[i + 1], 0xFF)
-        -- end
-
-        -- self.cpu:set_ip(0xF000, 0xE000)
-        printer.new(self.cpu)
+        -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/xenix8086.img", 0x80)
         self.enebled = true
     end
 end
@@ -227,7 +190,7 @@ end
 
 local execute = true
 local opc = 0
-local function handle_interupt_ibm(self)
+local function handle_ibm(self)
     if execute == true then
         execute = self.cpu:run_one(false, true)
         if execute == -1 then
@@ -243,7 +206,7 @@ end
 local function update(self)
     if self.enebled then
         for _ = 1, 10000 do
-            handle_interupt_ibm(self)
+            handle_ibm(self)
         end
     end
 end
@@ -263,7 +226,7 @@ local function shutdown(self)
 end
 
 local function save(self)
-    local drives = disks.get_drives()
+    local drives = self.disks.get_drives()
     for _, drive in pairs(drives) do
         if drive.edited then
             drive.handler:flush()
@@ -275,7 +238,6 @@ local function save(self)
     }
 
     for id, drive in pairs(floppy_to_load) do
-        print(drive)
         machine.loaded_drives[#machine.loaded_drives+1] = {drive.name, id}
     end
     file.write(get_save_path(self.id) .. "machine.json", json.tostring(machine, false))
@@ -312,6 +274,8 @@ function machine.new(id)
     self.dma = dma.new(self.cpu)
     self.serial = serial.new(self.cpu)
     -- self.fdc = fdc.new(self.cpu)
+    self.disks = disks.new(self.cpu)
+    printer.new(self.cpu)
     setmetatable(self, {})
 
     local path = get_save_path(self.id) .. "machine.json"

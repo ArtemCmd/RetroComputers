@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-field
 local logger = require("retro_computers:logger")
 local config = require("retro_computers:config")
 
@@ -8,6 +9,7 @@ local floppys = {}
 local items_path = "retro_computers:items/"
 
 local function load_floppy(path)
+    local packid = string.split(path, ":")
     local settings = json.parse(file.read(path .. "/floppy.json"))
     local name = settings.name or ("FLoppy " .. lastid)
     local filename = settings.filename or "disk1.img"

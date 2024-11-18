@@ -1,5 +1,3 @@
--- local colored_print = require("colored_print:main")
-
 local string_format = string.format
 
 local logger = {}

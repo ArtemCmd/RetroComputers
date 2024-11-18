@@ -13,7 +13,7 @@
             [0.84, 0.0, 0.5625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
             [0.0625, 0.0, 0.5625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
             [0.05, 0.0625, 0.0, 0.9, 0.3, 0.7, "ibm_xt_corpus"],
-            [0.2, 0.39, 0.05, 0.6, 0.5, 0.6, "ibm_xt_monitor_front", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor"]
+            [0.2, 0.39, 0.05, 0.6, 0.5, 0.6, "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor_front", "ibm_xt_monitor_front"]
         ]
     },
     "hitbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]

@@ -1,17 +1,35 @@
 -- Serial ports
--- FIXME!!!!!!!!!!!!!!
+
 local logger = require("retro_computers:logger")
 
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
-local status = 5
+local line_status = 0
 local dlab = 0
 local ports = {}
 local devisor = 0
 local ier = 0
-local fifo = false
-local fifoq = {}
 local itl = 0 -- Interrupt Trigger Level
 local beb = false -- Break Enable Bit
+local fifo = false
+local fifoq = {}
+
+local byte_to_word_lenght = {
+    [0] = 5,
+    [1] = 6,
+    [2] = 7,
+    [3] = 8
+}
+
+local byte_to_speed = {
+    [1] = 110,
+    [2] = 150,
+    [3] = 300,
+    [4] = 600,
+    [5] = 1200,
+    [6] = 2400,
+    [7] = 4800,
+    [9] = 9600
+}
 
 local function init_serial_port(cpu, base_addr)
     cpu:port_set(base_addr, function (cpu, port, val)
@@ -20,12 +38,12 @@ local function init_serial_port(cpu, base_addr)
                 logger:debug("Serial: %03X: Write to serial port: %d", base_addr, string.char(val))
             else
                 devisor = band(val, 0x00FF)
-                logger:debug("Serial: %03X: Devisor set ot %d", base_addr, devisor)
+                logger:debug("Serial: %03X: Devisor set to %d", base_addr, devisor)
             end
         else
             if dlab == 0 then
                 logger:debug("Serial: %03X: Read from serial port", base_addr)
-                return 0xFF
+                return 0x65
             else
                 return band(devisor, 0x00FF)
             end
@@ -94,7 +112,7 @@ local function init_serial_port(cpu, base_addr)
         end
     end)
 
-    cpu:port_set(base_addr + 4, function (cpu, port, val) -- Modem Control Register (TODO)
+    cpu:port_set(base_addr + 4, function (cpu, port, val) -- Modem Control Register
         if val then
 
         else
@@ -102,25 +120,12 @@ local function init_serial_port(cpu, base_addr)
         end
     end)
 
-    cpu:port_set(base_addr + 5, function (cpu, port, val) -- Line Status Register (TODO)
-        if val then
-
-        else
-            return 1
+    cpu:port_set(base_addr + 5, function (cpu, port, val) -- Line Status Register
+        if not val then
+            return line_status
         end
     end)
 end
-
-local byte_to_speed = {
-    [1] = 110,
-    [2] = 150,
-    [3] = 300,
-    [4] = 600,
-    [5] = 1200,
-    [6] = 2400,
-    [7] = 4800,
-    [9] = 9600
-}
 
 local function int_14(cpu, ax, ah, al)
     if ah == 0 then -- Initilize port
@@ -149,7 +154,7 @@ local function int_14(cpu, ax, ah, al)
         local stop_bits = band(lshift(cpu.regs[2], 4), 0xFF)
         local word_lenght = band(lshift(cpu.regs[4], 4), 0xFF)
         local speed = cpu.regs[4]
-        logger:debug("COM%d: EInitilize status:%d chetnost:%d stop_bits:%d word_lenght:%d speed:%d", port, status, chetnost, stop_bits, word_lenght, speed)
+        logger:debug("COM%d: Initilize status:%d chetnost:%d stop_bits:%d word_lenght:%d speed:%d", port, status, chetnost, stop_bits, word_lenght, speed)
     elseif ah == 5 then -- Extended modem control
         if al == 0 then -- Read from modem
             logger:debug("Modem: Read")
@@ -162,10 +167,10 @@ local function int_14(cpu, ax, ah, al)
     end
     return true
 end
+
 local serial = {}
 
 function serial.new(cpu)
-    local self = {}
     cpu:register_interrupt_handler(0x14, int_14)
     init_serial_port(cpu, 0x3F8) -- COM1
     init_serial_port(cpu, 0x2F8) -- COM2
@@ -175,7 +180,6 @@ function serial.new(cpu)
     init_serial_port(cpu, 0x4F8) -- COM6
     init_serial_port(cpu, 0x5E8) -- COM7
     init_serial_port(cpu, 0x4E8) -- COM8
-    return self
 end
 
 return serial
