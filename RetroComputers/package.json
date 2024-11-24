@@ -1,7 +1,10 @@
 {
     "id": "retro_computers",
     "title": "RetroComputers",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "creator": "Dave",
-    "description": "Контент-пак, добавляющий старые комплюктеры."
+    "description": "Контент-пак, добавляющий старые комплюктеры.",
+    "dependencies": [
+        "?libpng"
+    ]
 }

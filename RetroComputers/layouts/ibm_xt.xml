@@ -1,11 +1,10 @@
-<container size='640,630' gravity='center-center'>
+<container size='640,630'>
     <container id='updater'/>
-    <!-- <textbox id='screen' interactive='false' multiline='true' text-wrap='false' editable='false' color='#000000FF' size='640,600'/> -->
-    <container id='screen' color='#000000FF' size='640,600'/>
-    <panel id='cursor' color='#AAAAAA' size='8, 2' visible='false'/>
+    <container id='screen' size='640,600' color='#000000FF'/>
+    <image id='cursor' pos='100, 100' size='8, 2' color='#AAAAAA' visible='false'/>
 
-    <container id='control_panel' pos='0, 600' size='640,30' color='#222121'>
-        <button id='power_button' pos='5, 5' size='80, 20' onclick='start_vm()'>Вкл/Выкл</button>
+    <container id='control_panel' pos='0, 600' size='545,30' color='#222121'>
+        <button pos='5, 5' size='80, 20' onclick='start_vm()'>Вкл/Выкл</button>
         <button pos='90, 5' size='170, 20' onclick='send_ctrl_alt_del()'>Послать CTRL+ALT+DEL</button>
         <button pos='270, 5' size='170, 20' onclick='open_inventory()'>Открыть инвентарь</button>
         <button pos='450, 5' size='90, 20' onclick='show_keyboard()'>Клавиатура</button>

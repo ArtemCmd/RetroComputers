@@ -3,8 +3,8 @@ local logger = require("retro_computers:logger")
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local blocks = require("retro_computers:blocks")
 local cp437 = require("retro_computers:emulator/cp437")
+local config = require("retro_computers:config")
 
--- local band, rshift = bit.band, bit.rshift
 -- Screen
 local width, height, last_width, last_height
 local screen = document.screen
@@ -14,7 +14,6 @@ local mx, my, mz
 local machine = nil
 -- Font
 local glyph_width, glyph_height = 8, 8
-local FONT_SCALE = 1
 local cache = {}
 local is_cached = false
 
@@ -81,9 +80,9 @@ end
 
 function send_ctrl_alt_del()
     if machine then
-        machine.keyboard:send_key("left-ctrl")
-        machine.keyboard:send_key("alt")
-        machine.keyboard:send_key("delete")
+        machine.components.keyboard:send_key("left-ctrl")
+        machine.components.keyboard:send_key("alt")
+        machine.components.keyboard:send_key("delete")
     end
 end
 
@@ -95,10 +94,10 @@ local function refresh()
     if machine then
         local height = machine.display.height
         local width = machine.display.width
-        if machine.videocard.get_mode() < 4 then
-            local cursor_x = machine.display.cursor_x
-            local cursor_y = machine.display.cursor_y
-
+        if machine.components.videocard.get_mode() < 4 then
+            local cursor_x = screen.pos[1] + (machine.display.cursor_x * glyph_width)
+            local cursor_y = screen.pos[2] + (machine.display.cursor_y * glyph_height + (glyph_height - cursor.size[2]))
+            -- print(screen.wpos[1], machine.display.cursor_x)
             for y = 0, height - 1, 1 do
                 for x = 0, width - 1, 1 do
                     local cell = machine.display.buffer[y * width + x] or {0, 0, 15}
@@ -113,7 +112,7 @@ local function refresh()
                     end
                 end
             end
-            cursor.pos = {cursor_x * 8, cursor_y * 8 + 6}
+            cursor.pos = {cursor_x, cursor_y}
             cursor.visible = not cursor.visible
         else
             local str = {}
@@ -138,17 +137,30 @@ local function set_resolution(x, y)
 
     width = x
     height = y
-    -- local pixels_count = width * height
-    -- screen.size = {80 * 8, 25 * 16}
+
+    -- Apply scale
+    glyph_width = glyph_width * config.font_scale
+    glyph_height = glyph_height * config.font_scale
+
+
+    local viewport = gui.get_viewport()
+    document.root.size = viewport
+
+    -- Screen
     screen:clear()
+    screen.size = {x * glyph_width, y * glyph_height + 4}
+    screen.wpos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
     for i = 0, y - 1, 1 do
         for j = 0, x - 1, 1 do
             local index = i * x + j
-            -- local bg_index = pixels_count + index
-            --screen:add(string.format("<image id='%s' size='%d, %d' pos='%d, %d' color='#000000FF'/>", bg_index + 1, 8 * FONT_SCALE, 8 * FONT_SCALE, 8 * j * FONT_SCALE, 8 * i * FONT_SCALE))
-            screen:add(string.format("<image id='%s' size='%d, %d' pos='%d, %d' src='fonts/ibm_pc_8_8/glyphs/0'/>", index + 1, glyph_width * FONT_SCALE, glyph_height * FONT_SCALE, glyph_width * j * FONT_SCALE, glyph_height * i * FONT_SCALE))
+            screen:add(string.format("<image id='%s' size='%d, %d' pos='%d, %d' src='fonts/ibm_pc_8_8/glyphs/0'/>", index + 1, glyph_width, glyph_height, glyph_width * j, glyph_height * i))
         end
     end
+    cursor.size = {glyph_width, 2 * config.font_scale}
+
+    -- Control panel
+    local panel = document.control_panel
+    panel.pos = {screen.pos[1] + (screen.size[1] / 2 - panel.size[1] / 2), screen.pos[2] + screen.size[2]}
 end
 
 function on_open(x, y, z)

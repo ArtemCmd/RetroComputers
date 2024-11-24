@@ -29,10 +29,25 @@ local function update_keyboard()
     end
 end
 
-function button_key(key)
+local function send_key(key)
     if machine then
-        machine.keyboard:send_key(key)
+        local ascii = string.byte(key)
+        if ascii >= 65 and ascii <= 90 then
+            if not machine.components.keyboard.lshift then
+                machine.components.keyboard:send_key("left-shift")
+            end
+            machine.components.keyboard:send_key(string.lower(key))
+            if machine.components.keyboard.lshift then
+                machine.components.keyboard:send_key("left-shift")
+            end
+        else
+            machine.components.keyboard:send_key(key)
+        end
     end
+end
+
+function button_key(key)
+    send_key(key)
 end
 
 function button_close()
@@ -46,9 +61,9 @@ function send_text()
             for i = 1, #clipboard.text, 1 do
                 local char = clipboard.text:sub(i, i)
                 if char == "\n" then
-                    machine.keyboard:send_key("enter")
+                    machine.components.keyboard:send_key("enter")
                 else
-                    machine.keyboard:send_key(char)
+                    send_key(char)
                 end
             end
         end

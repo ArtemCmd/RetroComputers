@@ -31,7 +31,7 @@ local keycodes = {
     ["k"] = {107, 37},
     ["l"] = {108, 38},
     [";"] = {58, 0x27},
-    ["\\"] = {92, 0x2B},
+    ["back-slash"] = {92, 0x2B},
 
     ["z"] = {122, 44},
     ["x"] = {120, 45},
@@ -56,7 +56,7 @@ local keycodes = {
     ["0"] = {48, 11},
     ["-"] = {189, 0x0C},
 
-    ["left-shift"] = {0x2a, 0x2A},
+    ["left-shift"] = {42, 0x2A},
     ["f1"] = {189, 0x3b},
 
     ["left"] = {75, 0x4b},
@@ -79,11 +79,12 @@ local key_matrix = {}
 function manager.update()
     for key, code in pairs(keycodes) do
         if is_pressed("key:" .. key) then
-            events.emit("im_key_down", key, code[1], code[2])
+            events.emit("retro_computers:input_manager.key_down", key, code[1], code[2])
             key_matrix[code[2]] = true
+            break
         else
             if key_matrix[code[2]] then
-                events.emit("im_key_up", key, code[1], code[2])
+                events.emit("retro_computers:input_manager.key_up", key, code[1], code[2])
                 key_matrix[code[2]] = false
             end
         end

@@ -57,7 +57,7 @@
         <button  pos='565, 55' size='30, 20' onclick='button_key("7")'>7</button>
         <button  pos='600, 55' size='30, 20' onclick='button_key("8")'>8</button>
         <button  pos='635, 55' size='30, 20' onclick='button_key("9")'>9</button>
-        <button  pos='680, 55' size='30, 40' onclick='button_key("+")'>+</button>
+        <button  pos='680, 55' size='40, 40' onclick='button_key("+")'>+</button>
 
         <button  pos='5, 80' size='30, 20' onclick='button_key("caps-lock")'>CsLk</button>
         <button  pos='40, 80' size='30, 20' onclick='button_key("a")'>A</button>
@@ -70,7 +70,7 @@
         <button  pos='285, 80' size='30, 20' onclick='button_key("k")'>K</button>
         <button  pos='320, 80' size='30, 20' onclick='button_key("l")'>L</button>
         <button  pos='355, 80' size='30, 20' onclick='button_key(";")'>;</button>
-        <button  pos='390, 80' size='30, 20' onclick='button_key("kovichky")'>"</button>
+        <button  pos='390, 80' size='30, 20' onclick='button_key(""")'>"</button>
         <button  pos='510, 80' size='50, 20' onclick='button_key("enter")'>Enter</button>
         <button  pos='565, 80' size='30, 20' onclick='button_key("4")'>4</button>
         <button  pos='600, 80' size='30, 20' onclick='button_key("5")'>5</button>
@@ -92,7 +92,7 @@
         <button  pos='565, 105' size='30, 20' onclick='button_key("1")'>1</button>
         <button  pos='600, 105' size='30, 20' onclick='button_key("2")'>2</button>
         <button  pos='635, 105' size='30, 20' onclick='button_key("3")'>3</button>
-        <button  pos='680, 105' size='30, 20' onclick='button_key("Enter")'>Ent</button>
+        <button  pos='680, 105' size='40, 40' onclick='button_key("enter")'>Ent</button>
 
         <button  pos='5, 130' size='60, 20' onclick='button_key("left-ctrl")'>CTRL</button>
         <button  pos='70, 130' size='30, 20' onclick='button_key(" ")'>FN</button>

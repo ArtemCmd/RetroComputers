@@ -8,8 +8,10 @@ local ram_rom = {}
 
 local function get_save_path(id)
     local path =  "world:data/retro_computers/machines/"
-    if not file.exists(path .. id) then
-        file.mkdir(path .. id)
+    if file.exists("world:data") then
+        if not file.exists(path .. id) then
+            file.mkdir(path .. id)
+        end
     end
     return path .. id .. "/"
 end
@@ -23,7 +25,7 @@ function RAM.new(machine)
             if (key < 0xA0000) then
                 return ram_640k[key + 1] or 0
             elseif (key < 0xC0000) then
-                return machine.videocard.vram_read(key)
+                return machine.components.videocard.vram_read(key)
             elseif (key >= 0xF0000 and key < 0x100000) then
                 return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0xFF
             else
@@ -34,7 +36,7 @@ function RAM.new(machine)
             if (key < 0xA0000) then
                 ram_640k[key + 1] = value
             elseif (key < 0xC0000) then
-                machine.videocard.vram_write(key, value)
+                machine.components.videocard.vram_write(key, value)
             elseif (key >= 0xF0000 and key < 0x100000) then
                 ram_rom[band(key, 0xFFFFF) - 0xF0000] = value
             end
@@ -80,6 +82,7 @@ local serial = require("retro_computers:emulator/serial")
 local dma = require("retro_computers:emulator/hardware/i8237")
 -- local fdc = require("retro_computers:emulator/hardware/floppys/fdc")
 local printer = require("retro_computers:emulator/printer")
+local lpt = require("retro_computers:emulator/lpt")
 
 -- BIOS 
 local function int_11(cpu)
@@ -140,21 +143,21 @@ local function start(self)
     if not self.enebled then
         logger:info("IBM XT: Starting")
 
-        self.cpu.flags = 0x0202
+        self.components.cpu.flags = 0x0202
         -- BDA 
         local equipment = bor(0x0061, lshift(1, 6))
-        self.cpu.memory:w16(0x410, equipment)
-        self.cpu.memory:w16(0x413, 640) -- Memory size
-        self.cpu.memory[0x400] = 0xFF
-        self.cpu.memory[0x408] = 0xFF
+        self.components.cpu.memory:w16(0x410, equipment)
+        self.components.cpu.memory:w16(0x413, 640) -- Memory size
+        self.components.cpu.memory[0x400] = 0xFF
+        self.components.cpu.memory[0x408] = 0xFF
 
-        self.cpu:register_interrupt_handler(0x11, int_11)
-        self.cpu:register_interrupt_handler(0x12, int_12)
-        self.cpu:register_interrupt_handler(0x15, int_15)
-        self.cpu.memory[0xFFFFE] = 0xFE
-        self.videocard.set_mode(self.cpu, 3, true)
+        self.components.cpu:register_interrupt_handler(0x11, int_11)
+        self.components.cpu:register_interrupt_handler(0x12, int_12)
+        self.components.cpu:register_interrupt_handler(0x15, int_15)
+        self.components.cpu.memory[0xFFFFE] = 0xFE
+        self.components.videocard.set_mode(self.components.cpu, 3, true)
 
-        self.cpu:port_set(0x80, function (cpu, port, val) -- Debug port
+        self.components.cpu:port_set(0x80, function (cpu, port, val) -- Debug port
             if val then
 
             else
@@ -169,9 +172,9 @@ local function start(self)
         -- C(hard disk) - 0x80
         -- D(hard disk) - 0x81
         for id, floppy in pairs(floppy_to_load) do
-            self.disks.insert_disk(self.cpu, floppy.filename, id)
+            self.components.disks.insert_disk(self.components.cpu, floppy.filename, id)
         end
-        self.disks.boot_drive(self.cpu, 0x00)
+        self.components.disks.boot_drive(self.components.cpu, 0x00)
 
         -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/xenix8086.img", 0x80)
         self.enebled = true
@@ -182,8 +185,8 @@ local clock = os.clock()
 
 local function step(self, cv)
     clock = cv
-    self.keyboard:update()
-    self.videocard.update()
+    self.components.keyboard:update()
+    self.components.videocard.update()
     cv = os.clock()
     clock = cv
 end
@@ -192,7 +195,7 @@ local execute = true
 local opc = 0
 local function handle_ibm(self)
     if execute == true then
-        execute = self.cpu:run_one(false, true)
+        execute = self.components.cpu:run_one(false, true)
         if execute == -1 then
             step(self, os.clock())
             execute = true
@@ -215,24 +218,17 @@ local function shutdown(self)
     if self.enebled then
         self.enebled = false
         for i = 0, 0x100000 do
-            self.cpu.memory[i] = 0
+            self.components.cpu.memory[i] = 0
         end
         self.display.cursor_x = 0
         self.display.cursor_y = 0
-        self.cpu:reset()
-        self.videocard:reset()
-        self.videocard:update()
+        self.components.cpu:reset()
+        self.components.videocard:reset()
+        self.components.videocard:update()
     end
 end
 
 local function save(self)
-    local drives = self.disks.get_drives()
-    for _, drive in pairs(drives) do
-        if drive.edited then
-            drive.handler:flush()
-        end
-    end
-
     local machine = {
         loaded_drives = {}
     }
@@ -241,9 +237,23 @@ local function save(self)
         machine.loaded_drives[#machine.loaded_drives+1] = {drive.name, id}
     end
     file.write(get_save_path(self.id) .. "machine.json", json.tostring(machine, false))
+
+    local drives = self.components.disks.get_drives()
+    for _, drive in pairs(drives) do
+        if drive.edited then
+            drive.handler:flush()
+        end
+    end
 end
 
 function machine.new(id)
+    local machine_path =  "world:data/retro_computers/machines/" .. id
+    if file.exists("world:data") then
+        if not file.exists(machine_path .. id) then
+            file.mkdir(machine_path .. id)
+        end
+    end
+
     local self = {
         id = id,
         start = start,
@@ -253,7 +263,6 @@ function machine.new(id)
         insert_floppy = insert_floppy,
         enebled = false,
         is_focused = false,
-        videocard = {},
         display = {
             buffer = {},
             cursor_x = 0,
@@ -262,20 +271,21 @@ function machine.new(id)
             height = 25,
             mode = 0,
             update = function() end
-        }
+        },
+        components = {}
     }
-    self.memory = RAM.new(self)
-    self.cpu = cpu.new(self.memory)
-    self.pic = pic.new(self.cpu)
-    self.pit = pit.new(self.cpu)
-    self.keyboard = keyboard.new(self)
-    self.videocard = cga.new(self.cpu, self.display)
-    self.rtc = rtc.new(self.cpu)
-    self.dma = dma.new(self.cpu)
-    self.serial = serial.new(self.cpu)
-    -- self.fdc = fdc.new(self.cpu)
-    self.disks = disks.new(self.cpu)
-    printer.new(self.cpu)
+    self.components.memory = RAM.new(self)
+    self.components.cpu = cpu.new(self.components.memory)
+    self.components.pic = pic.new(self.components.cpu)
+    self.components.pit = pit.new(self.components.cpu)
+    self.components.keyboard = keyboard.new(self)
+    self.components.videocard = cga.new(self.components.cpu, self.display)
+    self.components.rtc = rtc.new(self.components.cpu)
+    self.components.dma = dma.new(self.components.cpu)
+    self.components.serial = serial.new(self.components.cpu)
+    self.components.disks = disks.new(self.components.cpu)
+    self.components.lpt = lpt.new(self.components.cpu)
+    printer.new(self.components.cpu)
     setmetatable(self, {})
 
     local path = get_save_path(self.id) .. "machine.json"

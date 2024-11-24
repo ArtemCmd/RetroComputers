@@ -1,4 +1,4 @@
-local logger = require("retro_computers:logger")
+-- local logger = require("retro_computers:logger")
 local cp437 = require("retro_computers:emulator/cp437")
 
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor

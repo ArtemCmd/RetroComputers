@@ -5,7 +5,11 @@ local global_path = pack.shared_file("retro_computers", "config.json")
 local local_path = pack.data_file("retro_computers", "config.json")
 local default = {
     screen_keyboard_delay = 80,
-    floppy_paths = {"retro_computers:modules/emulator/floppy_disks"}
+    floppy_paths = {"retro_computers:modules/emulator/floppy_disks"},
+    page_width = 200,
+    page_height = 300,
+    create_page_item = false,
+    font_scale = 1.0
 }
 
 function config.save()
@@ -25,7 +29,6 @@ end
 
 function config.load()
     logger:info("Config: Loading")
-
     local data = {}
     if file.exists(local_path) then
         logger:info("Config: Local loaded")
@@ -44,9 +47,9 @@ function config.load()
 
     setmetatable(config, {
         __index = function (t, key)
-            if rawget(config, key) then
+            if rawget(config, key) ~= nil then
                 return rawget(config, key)
-            elseif default[key] then
+            elseif default[key] ~= nil then
                 return default[key]
             else
                 logger:error("Config: Unknown key %s", tostring(key))

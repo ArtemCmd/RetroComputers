@@ -15,15 +15,11 @@ end
 function vmmanager.registry(machine)
     if machine then
         local id = vmmanager.get_next_id()
-        -- if vms[id] then
-        --     logger:warning("VMManager: Machine already exists")
-        -- else
-            machine.id = id
-            vms[id] = machine
-            logger:info("VMManager: Machine %s registred", id)
-        -- end
+        machine.id = id
+        vms[id] = machine
+        logger:info("VMManager: Machine %s registred", id)
     else
-        logger:error("VMManager: Machine is nil!")
+        logger:error("VMManager: Registration Error: Machine is nil")
     end
 end
 

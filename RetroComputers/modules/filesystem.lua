@@ -22,7 +22,13 @@ end
 
 function filesytem.open(path)
     if handlers[path] == nil then
-        local handle = {path = path}
+        local handle = {
+            path = path,
+            set_position = set_position,
+            read = read,
+            write = write,
+            flush = flush
+        }
         if file.exists(path) then
             local reason, result = pcall(file.read_bytes, path)
             if reason then
@@ -35,10 +41,6 @@ function filesytem.open(path)
             handle.buffer = data_buffer()
         end
 
-        handle.set_position = set_position
-        handle.read = read
-        handle.write = write
-        handle.flush = flush
         handlers[path] = handle
         return handle
     else

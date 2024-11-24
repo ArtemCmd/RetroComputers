@@ -1,5 +1,3 @@
--- Serial ports
-
 local logger = require("retro_computers:logger")
 
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor

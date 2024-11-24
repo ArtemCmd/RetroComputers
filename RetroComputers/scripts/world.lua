@@ -7,12 +7,20 @@ local drive_manager = require("retro_computers:emulator/drive_manager")
 local input_manager = require("retro_computers:emulator/input_manager")
 
 function on_world_open()
-    local path =  "world:data/retro_computers/"
-    if not file.exists(path) then
-        file.mkdir(path)
+    if not file.exists("world:") then
+        file.mkdir("world:")
     end
-    if not file.exists(path .. "machines") then
-        file.mkdir(path .. "machines")
+
+    if not file.exists("world:data") then
+        file.mkdir("world:data")
+    end
+
+    if not file.exists("world:data/retro_computers") then
+        file.mkdir("world:data/retro_computers")
+    end
+
+    if not file.exists("world:data/retro_computers/machines") then
+        file.mkdir("world:data/retro_computers/machines")
     end
 
     config.load()
@@ -23,6 +31,8 @@ function on_world_open()
     vmmanager.registry(machine)
 
     -- Setup commands
+
+    -- VMManager
     console.add_command("retro_computers.vmmanager.get_machine_info id:int", "Show machine info", function (args, kwargs)
         local machine = vmmanager.get_machine(args[1])
         if machine then
@@ -30,7 +40,7 @@ function on_world_open()
             console.log("   Enebled=" .. tostring(machine.enebled))
             console.log("   Focused=" .. tostring(machine.is_focused))
             console.log("Installed components:")
-            for key, value in pairs(machine) do
+            for key, value in pairs(machine.components) do
                 if type(value) == "table" then
                     console.log("   " .. key)
                 end
@@ -48,6 +58,7 @@ function on_world_open()
         end
     end)
 
+    -- Config
     console.add_command("retro_computers.config.list", "Show available configuration", function (args, kwargs)
         console.log("Current config:")
         local function recursive_print(t)

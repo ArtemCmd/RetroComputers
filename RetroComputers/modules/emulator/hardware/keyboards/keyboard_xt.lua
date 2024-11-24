@@ -11,7 +11,21 @@ local control_reg = 0x03
 local status_reg = 0
 
 local function send(self, char, code)
-    charqueue[#charqueue+1] = {code, char}
+    -- logger:debug("Keybooard XT: Key=%02X Char=%02X sended, lShift=%s", code, char, self.lshift)
+    if code == 0x2A or code == 0xAA then
+        charqueue[#charqueue+1] = {code, 0}
+        if code == 0x2A then
+            self.lshift = true
+        else
+            self.lshift = false
+        end
+    else
+        if self.lshift and char >= 0x61 and char <= 0x7A then
+            charqueue[#charqueue+1] = {code, char - 32}
+        else
+            charqueue[#charqueue+1] = {code, char}
+        end
+    end
     self.cpu:emit_interrupt(9, false)
 end
 
@@ -122,9 +136,24 @@ local function int_16(cpu, ax,ah,al)
 	end
 end
 
-local function send_key(self, key)
-    local keycode = input_manager.get_keycode(key) or {0, 57}
-    buffer[#buffer+1] = keycode
+local function send_key(self, keyname)
+    local keycode = input_manager.get_keycode(keyname) or {0, 57}
+    if keyname == "left-shift" then
+        if not self.lshift then
+            buffer[#buffer+1] = {0, keycode[2]}
+            self.lshift = true
+        else
+            buffer[#buffer+1] = {0, bor(0x80, keycode[2])}
+            self.lshift = false
+        end
+    else
+        if self.lshift and keycode[2] >= 0x61 and keycode[2] <= 0x7A then
+            buffer[#buffer+1] = {keycode[1] - 32, keycode[2]}
+        else
+            buffer[#buffer+1] = {keycode[1], keycode[2]}
+        end
+        buffer[#buffer+1] = {keycode[1], bor(0x80, keycode[2])}
+    end
 end
 
 local keyboard = {}
@@ -132,12 +161,18 @@ local keyboard = {}
 function keyboard.new(machine)
     local self = {
         machine = machine,
-        cpu = machine.cpu,
+        cpu = machine.components.cpu,
         update = update,
-        send_key = send_key
+        send_key = send_key,
+        lshift = false,
+        rshift = false,
+        lcontrol = false,
+        rcontrol = false,
+        capslock = false
     }
 
     local timer = 0
+    local lastkey = 0
     local key_matrix = {}
     self.cpu.memory[0x471] = 0 -- Break key check
     self.cpu.memory[0x496] = 0 -- Keyboard mode/type
@@ -150,12 +185,15 @@ function keyboard.new(machine)
     self.cpu:register_interrupt_handler(0x9, int_9)
     self.cpu:register_interrupt_handler(0x16, int_16)
 
-    events.on("im_key_down",  function(char, ascii, code)
+    events.on("retro_computers:input_manager.key_down",  function(char, ascii, code)
         if machine.is_focused then
+            -- logger:debug("Keyboard XT: Key %d pressed", code)
+            if not (lastkey == code) then
+                timer = 0
+            end
             if key_matrix[code] == true then
-                if timer > 2 then
+                if timer > 5 then
                     send(self, ascii, code)
-                    timer = 0
                 else
                     timer = timer + 1
                 end
@@ -163,16 +201,16 @@ function keyboard.new(machine)
                 send(self, ascii, code)
                 key_matrix[code] = true
             end
-            -- logger:debug("Keyboard XT: Key %d pressed", code)
+            lastkey = code
         end
     end)
 
-    events.on("im_key_up", function(char, ascii, code)
+    events.on("retro_computers:input_manager.key_up", function(char, ascii, code)
         if machine.is_focused then
+            -- logger:debug("Keyboard XT: Key %d realesed", code)
             send(self, ascii,  bor(0x80, code))
             key_matrix[code] = false
             timer = 0
-            -- logger:debug("Keyboard XT: Key %d realesed", code)
         end
     end)
 

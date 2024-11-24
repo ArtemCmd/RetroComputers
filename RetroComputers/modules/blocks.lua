@@ -1,3 +1,4 @@
+local logger = require("retro_computers:logger")
 local blocks = {}
 local list = {}
 local current_block
@@ -22,6 +23,8 @@ end
 function blocks.set_current_block(x, y, z)
     if list[get_key(x, y, z)] then
         current_block = list[get_key(x, y, z)]
+    else
+        logger:warning("Blocks: Block not found!")
     end
 end
 

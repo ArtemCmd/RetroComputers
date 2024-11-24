@@ -1,5 +1,4 @@
 local string_format = string.format
-
 local logger = {}
 local logs = {}
 

@@ -17,11 +17,12 @@ local function load_floppy(path)
     if file.exists(path .. "/" .. filename) then
         if not file.exists(items_path .. "floppy_" .. name .. ".json") then
             -- logger:debug("DriveManager: Creating item")
+            local path_to_item = packid[1] .. ":" .. "items/floppy_" .. name .. ".json"
             local item = {
                 ["icon-type"] = "sprite",
-                ["icon"] = "items:floppy"
+                ["icon"] = "items:floppy_" .. math.random(1, 6)
             }
-            file.write("retro_computers:items/floppy_" .. name .. ".json", json.tostring(item, true))
+            file.write(path_to_item, json.tostring(item, true))
         end
         local floppy = {
             name = name,
@@ -30,7 +31,7 @@ local function load_floppy(path)
         }
         floppys[name] = floppy
         lastid = lastid  + 1
-        logger:info("DriveManager: DriveManager: Floppy \"%s\" added", name)
+        logger:info("DriveManager: Floppy \"%s\" added", name)
     end
 end
 
