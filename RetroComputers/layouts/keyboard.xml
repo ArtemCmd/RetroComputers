@@ -53,7 +53,7 @@
         <button  pos='355, 55' size='30, 20' onclick='button_key("p")'>P</button>
         <button  pos='390, 55' size='30, 20' onclick='button_key("[")'>{</button>
         <button  pos='425, 55' size='30, 20' onclick='button_key("]")'>}</button>
-        <button  pos='460, 55' size='30, 20' onclick='button_key("back-slash")'>\</button>
+        <button  pos='460, 55' size='30, 20' onclick='button_key("back-slash")'>BS</button>
         <button  pos='565, 55' size='30, 20' onclick='button_key("7")'>7</button>
         <button  pos='600, 55' size='30, 20' onclick='button_key("8")'>8</button>
         <button  pos='635, 55' size='30, 20' onclick='button_key("9")'>9</button>
