@@ -32,7 +32,6 @@ local irr = 0 -- Interrupt Request Register
 
 local function port_20(cpu, port, val)
     if val then
-        -- logger:debug("PIC: Write %02X to port 20", val)
         if band(val, 0x10) then
             icwstep = 1
             imr = 0
@@ -51,7 +50,6 @@ local function port_20(cpu, port, val)
             end
         end
     else
-        -- logger:debug("PIC: Read from port 20")
         if readmode then
             return irr
         else
@@ -62,7 +60,6 @@ end
 
 local function port_21(cpu, port, val)
     if val then
-        -- logger:debug("PIC: Write %02X to port 21", val)
         if icwstep == 3 and band(icw[1], 2) then
             icwstep = 4
         end
@@ -73,7 +70,6 @@ local function port_21(cpu, port, val)
             imr = val
         end
     else
-        -- logger:debug("PIC: Read from port 21")
         return imr
     end
 end

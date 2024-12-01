@@ -6,7 +6,7 @@ local function init_port(self, base, cpu)
     self.ports[base] = {nil, 0, 0}
     cpu:port_set(base, function(cpu, port, val) -- Data Register
         if val then
-            logger:debug("LPT %d: Write %d to Data register", base, val)
+            logger:debug("LPT %03X: Write %d to Data register", base, val)
             if self.ports[base][1] then
                 if self.ports[base][1].write then
                     self.ports[base][1]:write(val)
@@ -15,7 +15,7 @@ local function init_port(self, base, cpu)
             end
             self.ports[base][2] = val
         else
-            logger:debug("LPT %d: Read Data register", base)
+            logger:debug("LPT %03X: Read Data register", base)
             if self.ports[base][1] then
                 if self.ports[base][1].read then
                     return self.ports[base][1]:read(val)
@@ -26,7 +26,7 @@ local function init_port(self, base, cpu)
     end)
     cpu:port_set(base + 1, function(cpu, port, val) -- Status Register
         if not val then
-            logger:debug("LPT %d: Read Status register", base)
+            logger:debug("LPT %03X: Read Status register", base)
             if self.ports[base] then
                 if self.ports[base].read_status then
                     return self.ports[base].read_status()
@@ -37,7 +37,7 @@ local function init_port(self, base, cpu)
     end)
     cpu:port_set(base + 2, function(cpu, port, val) -- Control Register
         if val then
-            logger:debug("LPT %d: Write %d to Control register", base, val)
+            logger:debug("LPT %03X: Write %d to Control register", base, val)
             if self.ports[base] then
                 if self.ports[base].write_control then
                     self.ports[base]:write_control(val)
@@ -46,7 +46,7 @@ local function init_port(self, base, cpu)
             end
             self.ports[base][3] = val
         else
-            logger:debug("LPT %d: Read Control register", base)
+            logger:debug("LPT %03X: Read Control register", base)
             if self.ports[base] then
                 if self.ports[base].read_control then
                     return self.ports[base]:read_control(val)

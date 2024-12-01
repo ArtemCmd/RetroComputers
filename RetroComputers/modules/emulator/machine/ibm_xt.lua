@@ -25,7 +25,7 @@ function RAM.new(machine)
             if (key < 0xA0000) then
                 return ram_640k[key + 1] or 0
             elseif (key < 0xC0000) then
-                return machine.components.videocard.vram_read(key)
+                return machine.components.videocard:vram_read(key)
             elseif (key >= 0xF0000 and key < 0x100000) then
                 return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0xFF
             else
@@ -36,7 +36,7 @@ function RAM.new(machine)
             if (key < 0xA0000) then
                 ram_640k[key + 1] = value
             elseif (key < 0xC0000) then
-                machine.components.videocard.vram_write(key, value)
+                machine.components.videocard:vram_write(key, value)
             elseif (key >= 0xF0000 and key < 0x100000) then
                 ram_rom[band(key, 0xFFFFF) - 0xF0000] = value
             end
@@ -78,11 +78,11 @@ local rtc = require("retro_computers:emulator/hardware/rtc")
 local cga = require("retro_computers:emulator/hardware/videocards/cga")
 local disks = require("retro_computers:emulator/disks")
 local keyboard = require("retro_computers:emulator/hardware/keyboards/keyboard_xt")
-local serial = require("retro_computers:emulator/serial")
+local serial = require("retro_computers:emulator/hardware/serial")
 local dma = require("retro_computers:emulator/hardware/i8237")
--- local fdc = require("retro_computers:emulator/hardware/floppys/fdc")
+local fdc = require("retro_computers:emulator/hardware/floppys/fdc")
 local printer = require("retro_computers:emulator/printer")
-local lpt = require("retro_computers:emulator/lpt")
+local lpt = require("retro_computers:emulator/hardware/lpt")
 
 -- BIOS 
 local function int_11(cpu)
@@ -155,15 +155,16 @@ local function start(self)
         self.components.cpu:register_interrupt_handler(0x12, int_12)
         self.components.cpu:register_interrupt_handler(0x15, int_15)
         self.components.cpu.memory[0xFFFFE] = 0xFE
-        self.components.videocard.set_mode(self.components.cpu, 3, true)
+        self.components.videocard:set_mode(self.components.cpu, 3, true)
 
         self.components.cpu:port_set(0x80, function (cpu, port, val) -- Debug port
             if val then
-
+                -- logger:debug("i8086: Debug port: %02X", val)
             else
                 return 0xff
             end
         end)
+
         -- insert_disk(cpu, path, drive_id)
         -- disk_boot(cpu, drive_id)
         -- Drive ids:
@@ -171,11 +172,21 @@ local function start(self)
         -- B(floppy) - 0x01
         -- C(hard disk) - 0x80
         -- D(hard disk) - 0x81
+
         for id, floppy in pairs(floppy_to_load) do
             self.components.disks.insert_disk(self.components.cpu, floppy.filename, id)
         end
-        self.components.disks.boot_drive(self.components.cpu, 0x00)
+        self.components.disks.boot_drive(self.components.cpu, 0x00) -- book8088 0xFC000
 
+        -- local rom = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/bios-xt.bin")
+        -- -- local rom2 = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/5000027.u19")
+        -- -- for i = 0, #rom - 1, 1 do
+        -- --     self.components.cpu.memory[0xF8000 + i] = rom[i + 1]
+        -- -- end
+        -- for i = 0, #rom - 1, 1 do
+        --     self.components.cpu.memory[0xFC000 + i] = rom[i + 1]
+        -- end
+        -- self.components.cpu:set_ip(0xFFFF, 0)
         -- disks.insert_disk(self.cpu, "retro_computers:modules/emulator/hard_disks/xenix8086.img", 0x80)
         self.enebled = true
     end
@@ -186,7 +197,8 @@ local clock = os.clock()
 local function step(self, cv)
     clock = cv
     self.components.keyboard:update()
-    self.components.videocard.update()
+    self.components.videocard:update()
+    self.components.pit:update()
     cv = os.clock()
     clock = cv
 end
@@ -225,6 +237,7 @@ local function shutdown(self)
         self.components.cpu:reset()
         self.components.videocard:reset()
         self.components.videocard:update()
+        self.components.keyboard:reset()
     end
 end
 
@@ -281,10 +294,11 @@ function machine.new(id)
     self.components.keyboard = keyboard.new(self)
     self.components.videocard = cga.new(self.components.cpu, self.display)
     self.components.rtc = rtc.new(self.components.cpu)
-    self.components.dma = dma.new(self.components.cpu)
+    -- self.components.dma = dma.new(self.components.cpu)
     self.components.serial = serial.new(self.components.cpu)
     self.components.disks = disks.new(self.components.cpu)
     self.components.lpt = lpt.new(self.components.cpu)
+    self.components.fdc = fdc.new(self.components.cpu)
     printer.new(self.components.cpu)
     setmetatable(self, {})
 

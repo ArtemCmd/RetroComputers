@@ -2,7 +2,7 @@
 -- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa govnokod
 local logger = require("retro_computers:logger")
 
-local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
+local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
 local io_ports = {}
 local run_one = function (self, a, b) end
 
@@ -86,7 +86,6 @@ end
 local function cpu_complement_flag(self, t)
     self.flags = bxor(self.flags, lshift(1, t))
 end
-
 
 local function cpu_incdec_dir(self, t, amount)
     if (band(self.flags, lshift(1, (10))) ~= 0) then
@@ -393,8 +392,8 @@ local function cpu_uf_sub(self, v1, v2, vb, vr, opc)
     end
 end
 
-local function _cpu_uf_bit(self, vr, opc)
-    self.flags = band(self.flags, bxor(self.flags, 0x0801))
+local function cpu_uf_bit(self, vr, opc)
+    self.flags = band(self.flags, bnot(0x0801))
     cpu_zsp(self, vr, opc)
 end
 
@@ -687,7 +686,7 @@ local function cpu_xor(self, mrm, opc)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr = bxor(v1, v2)
     cpu_write_rm(self, mrm, mrm.dst, vr)
-    _cpu_uf_bit(self, vr, opc)
+    cpu_uf_bit(self, vr, opc)
 end
 
 local function cpu_and(self, mrm, opc)
@@ -695,14 +694,14 @@ local function cpu_and(self, mrm, opc)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr = band(v1, v2)
     cpu_write_rm(self, mrm, mrm.dst, vr)
-    _cpu_uf_bit(self, vr, opc)
+    cpu_uf_bit(self, vr, opc)
 end
 
 local function cpu_test(self, mrm, opc)
     local v1 = cpu_read_rm(self, mrm, mrm.src)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr = band(v1, v2)
-    _cpu_uf_bit(self, vr, opc)
+    cpu_uf_bit(self, vr, opc)
 end
 
 local function cpu_or(self, mrm, opc)
@@ -710,7 +709,7 @@ local function cpu_or(self, mrm, opc)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr = bor(v1, v2)
     cpu_write_rm(self, mrm, mrm.dst, vr)
-    _cpu_uf_bit(self, vr, opc)
+    cpu_uf_bit(self, vr, opc)
 end
 
 local function cpu_rep(self, cond)
@@ -752,7 +751,7 @@ end
 
 local function cpu_in(port)
     local p = io_ports[port]
-    -- logger:warning("i8086: Cpu in: port:%02X", port)
+    -- logger:debug("i8086: Cpu in: port:%02X", port)
     if p == nil then
         logger:warning("i8086: Cpu in: port:%02X not found", port)
         return 0xFF
@@ -817,6 +816,7 @@ local function cpu_int_fake(self, id)
 end
 
 local function cpu_int(self, id)
+    -- logger:debug("i8086: INT %02X", id)
     local addr = self.memory:r16(id * 4)
     local seg = self.memory:r16(id * 4 + 2)
 
@@ -828,7 +828,7 @@ local function cpu_int(self, id)
     self.ip = addr
     self.halted = false
 
-    self.flags = band(self.flags, bxor(self.flags, lshift(1, (9))))
+    self.flags = band(self.flags, bnot(lshift(1, 9)))
 end
 
 local rel_jmp_conds = {
@@ -859,7 +859,7 @@ opcode_map[0x90] = function(self, opcode) end
 opcode_map[0x00] = function(self, opcode)
     cpu_add(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode)
 end
-for i=0x01,0x05 do 
+for i=0x01,0x05 do
     opcode_map[i] = opcode_map[0x00]
 end
 
@@ -1264,11 +1264,11 @@ end
 
 -- TEST AL, imm8
 opcode_map[0xA8] = function(self, opcode)
-    _cpu_uf_bit(self, band(band(self.regs[1], advance_ip(self)), 0xFF), 0)
+    cpu_uf_bit(self, band(band(self.regs[1], advance_ip(self)), 0xFF), 0)
 end
 -- TEST AX, imm16
 opcode_map[0xA9] = function(self, opcode)
-    _cpu_uf_bit(self, band(self.regs[1], advance_ip16(self)), 1)
+    cpu_uf_bit(self, band(self.regs[1], advance_ip16(self)), 1)
 end
 
 -- STOSB/STOSW

@@ -70,7 +70,7 @@
         <button  pos='285, 80' size='30, 20' onclick='button_key("k")'>K</button>
         <button  pos='320, 80' size='30, 20' onclick='button_key("l")'>L</button>
         <button  pos='355, 80' size='30, 20' onclick='button_key(";")'>;</button>
-        <button  pos='390, 80' size='30, 20' onclick='button_key(""")'>"</button>
+        <button  pos='390, 80' size='30, 20' onclick='button_key("kovichki")'>"</button>
         <button  pos='510, 80' size='50, 20' onclick='button_key("enter")'>Enter</button>
         <button  pos='565, 80' size='30, 20' onclick='button_key("4")'>4</button>
         <button  pos='600, 80' size='30, 20' onclick='button_key("5")'>5</button>

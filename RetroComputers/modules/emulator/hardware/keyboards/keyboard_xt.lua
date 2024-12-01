@@ -1,38 +1,35 @@
 -- local logger = require("retro_computers:logger")
 local input_manager = require("retro_computers:emulator/input_manager")
 
-local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
+local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
 local is_pressed = input.is_pressed
-local charqueue = {}
-local buffer = {}
-local status = 0x10
-local speaker_enebled = false
-local control_reg = 0x03
-local status_reg = 0
 
 local function send(self, char, code)
-    -- logger:debug("Keybooard XT: Key=%02X Char=%02X sended, lShift=%s", code, char, self.lshift)
+    -- logger:debug("Keybooard XT: Key = %s, Scancode = %02X, ASCII = %02X, lShift=%s, Key Queue End = %d", string.char(char),code, char, self.lshift, self.key_queue_end)
     if code == 0x2A or code == 0xAA then
-        charqueue[#charqueue+1] = {code, 0}
+        self.char_queue[#self.char_queue+1] = {0, code}
         if code == 0x2A then
             self.lshift = true
         else
             self.lshift = false
         end
     else
-        if self.lshift and char >= 0x61 and char <= 0x7A then
-            charqueue[#charqueue+1] = {code, char - 32}
+        if self.lshift and (char >= 0x61) and (char <= 0x7A) then
+            self.char_queue[#self.char_queue+1] = {char - 32, code}
         else
-            charqueue[#charqueue+1] = {code, char}
+            self.char_queue[#self.char_queue+1] = {char, code}
         end
     end
-    self.cpu:emit_interrupt(9, false)
+
+    self.key_queue[self.key_queue_end][1] = char
+    self.key_queue[self.key_queue_end][2] = code
+    self.key_queue_end = band(self.key_queue_end + 1, 0x0F)
 end
 
 local function get_keys_status(self, ks)
 	local keys = 0
-	for i, k in ipairs(ks) do
-        if is_pressed("key:" .. k) and self.machine.is_focused then
+	for i = 1, #ks, 1 do
+        if is_pressed("key:" .. ks[i]) and self.machine.is_focused then
 			keys = bor(keys, lshift(1, (i - 1)))
 		end
 	end
@@ -40,123 +37,165 @@ local function get_keys_status(self, ks)
 end
 
 local function update(self)
-    if #buffer > 0 then
-        local key =  table.remove(buffer, 1)
+    self.cpu.memory[0x417] = get_keys_status(self, {"left-shift", "nil", "nil", "nil", "nil", "nil", "caps-lock", "nil"}) -- Shift, Ctrl, Alt, ScrollLock, NumLock, CapsLock, Insert
+	-- self.cpu.memory[0x418] = get_keys_status(self, {"nil", "nil", "nil", "nil", "nil", "nil", "nil", "nil"}) -- lShift + Ctrl, lShift + Alt, Sysreq, Pause, ScrollLock, NumLock, CapsLock, Insert
+    if (#self.buffer > 0) then
+        local key =  table.remove(self.buffer, 1)
         send(self, key[1], key[2])
     end
-	self.cpu.memory[0x417] = get_keys_status(self, {"left-shift", "nil", "nil", "nil", "nil", "nil", "caps-lock", "nil"}) -- Shift, Ctrl, Alt, ScrollLock, NumLock, CapsLock, Insert
-	-- self.cpu.memory[0x418] = get_keys_status(self, {"nil", "nil", "nil", "nil", "nil", "nil", "nil", "nil"}) -- lShift + Ctrl, lShift + Alt, Sysreq, Pause, ScrollLock, NumLock, CapsLock, Insert
+    if (self.key_queue_start ~= self.key_queue_end) then
+        self.data_reg = self.key_queue[self.key_queue_start][2]
+        self.key_queue_start = band(self.key_queue_start + 1, 0x0F)
+        self.cpu:emit_interrupt(9, false)
+    end
 end
 
 -- Keyboard ports
-local function port_60(cpu, port, val)
-	if not val then
-        if #charqueue > 0 then
-			local key = table.remove(charqueue, 1)
-			return key[1]
-		end
-        return 0xFF
-	end
-end
-
-local function port_61(cpu, port, val)
-	if val then
-		control_reg = val
-        speaker_enebled = (band(val, 3) == 3)
-        if speaker_enebled then
-            audio.play_sound_2d("computer/beep", 1.0, 1.0)
+local function port_60(self)
+    return function(cpu, port, val)
+        if not val then
+            return self.data_reg
         end
-	else
-        return control_reg
-	end
+    end
 end
 
-local function port_64(cpu, port,val)
-	if val then
-		status_reg = 1
-	else
-        local ret = bor(status, lshift(status_reg, 3))
-		if #charqueue > 0 then
-			status = bxor(status, 3)
-		else
-			status = band(status, 0xFC)
-		end
-		return ret
-	end
+local function port_61(self)
+    return function(cpu, port, val)
+        if val then
+            self.control_reg = val
+            self.speaker_enebled = (band(val, 3) == 3)
+            if self.speaker_enebled then
+                audio.play_sound_2d("computer/beep", 1.0, 1.0)
+            end
+        else
+            return self.control_reg
+        end
+    end
+end
+
+local function port_64(self)
+    return function(cpu, port,val)
+        if val then
+            self.status_reg = 1
+        else
+            local ret = bor(self.status, lshift(self.status_reg, 3))
+            if #self.char_queue > 0 then
+                self.status = bxor(self.status, 3)
+            else
+                self.status = band(self.status, 0xFC)
+            end
+            return ret
+        end
+    end
 end
 
 -- Keybooard interrupts
-local function int_9(cpu, ax,ah,al)
-    return true
+local function int_9(self)
+    return function(cpu, ax,ah,al)
+        return true
+    end
 end
 
-local function int_16(cpu, ax,ah,al)
-	if ah == 0x00 then -- Read Character
-        if #charqueue > 0 then
-            local char =  table.remove(charqueue, 1)
-            local scancode, ascii = char[1], char[2]
+local function int_16(self)
+    return function(cpu, ax,ah,al)
+        if ah == 0x00 then -- Read Character
+            if #self.char_queue > 0 then
+                local char =  table.remove(self.char_queue, 1)
+                local scancode, ascii = char[2], char[1]
 
-            if scancode < 0x7F then
-                cpu:clear_flag(6)
-                cpu.regs[1] = bor(lshift(band(scancode, 0xFF), 8), band(ascii, 0xFF))
+                if scancode < 0x7F then
+                    cpu:clear_flag(6)
+                    cpu.regs[1] = bor(lshift(band(scancode, 0xFF), 8), band(ascii, 0xFF))
+                else
+                    cpu:set_flag(6)
+                end
+                return true
             else
                 cpu:set_flag(6)
-            end
-            return true
-        else
-            cpu:set_flag(6)
-			return true
-        end
-	elseif ah == 0x01 then -- Read Input Status
-        if #charqueue > 0 then
-            local ascii, scancode = charqueue[1][2], charqueue[1][1]
-            if scancode == nil then
                 return true
+            end
+        elseif ah == 0x01 then -- Read Input Status
+            if #self.char_queue > 0 then
+                local ascii, scancode = self.char_queue[1][1], self.char_queue[1][2]
+                if scancode == nil then
+                    return true
+                else
+                    cpu:clear_flag(6)
+                    cpu.regs[1] = bor(lshift(band(scancode, 0xFF), 8), band(ascii, 0xFF))
+                    return true
+                end
             else
-                cpu:clear_flag(6)
-                cpu.regs[1] = bor(lshift(band(scancode, 0xFF), 8), band(ascii, 0xFF))
                 return true
             end
-        else
+        elseif ah == 0x02 then -- Read Keyboard Shift Status
+            if ah == 0x12 then
+                ah = cpu.memory[0x418]
+            end
+            al = cpu.memory[0x417]
+            cpu.regs[1] = bor(lshift(ah, 8), al)
             return true
+        elseif ah == 0x05 then -- Send char to keyboard buffer
+            local scancode = rshift(cpu.regs[2], 8)
+            local ascii = band(cpu.regs[2], 0xFF)
+
+            send(self, ascii, scancode)
+
+            cpu.regs[1] = lshift(ah, 8)
+            return true
+        else
+            cpu:set_flag(0)
+            return false
         end
-	elseif ah == 0x02 then -- Read Keyboard Shift Status
-        local cx = cpu.regs[2]
-		local scancode = band(rshift(cx, 8), 0xFF)
-        local ascii =  band(cx, 0xFF)
-        buffer[#buffer+1] = {ascii, scancode}
-		return true
-    elseif ah == 0x05 then -- Send char to keyboard buffer
-		al = cpu.memory[0x417]
-		cpu.regs[1] = bor(lshift(ah, 8), al)
-		return true
-    else
-		cpu:set_flag(0)
-        return false
-	end
+    end
 end
 
 local function send_key(self, keyname)
     local keycode = input_manager.get_keycode(keyname) or {0, 57}
     if keyname == "left-shift" then
         if not self.lshift then
-            buffer[#buffer+1] = {0, keycode[2]}
+            self.buffer[#self.buffer+1] = {0, keycode[2]}
             self.lshift = true
         else
-            buffer[#buffer+1] = {0, bor(0x80, keycode[2])}
+            self.buffer[#self.buffer+1] = {0, bor(0x80, keycode[2])}
             self.lshift = false
         end
     else
         if self.lshift and keycode[2] >= 0x61 and keycode[2] <= 0x7A then
-            buffer[#buffer+1] = {keycode[1] - 32, keycode[2]}
+            self.buffer[#self.buffer+1] = {keycode[1] - 32, keycode[2]}
         else
-            buffer[#buffer+1] = {keycode[1], keycode[2]}
+            self.buffer[#self.buffer+1] = {keycode[1], keycode[2]}
         end
-        buffer[#buffer+1] = {keycode[1], bor(0x80, keycode[2])}
+        self.buffer[#self.buffer+1] = {keycode[1], bor(0x80, keycode[2])}
     end
 end
 
 local keyboard = {}
+
+local function reset(self)
+    self.control_reg = 3
+    self.data_reg = 0
+    self.configuration_reg = 0x6C
+    self.status_reg = 0
+    self.status = 0x10
+    self.key_queue_end = 0
+    self.key_queue_start = 0
+
+    for i = 0, #self.key_queue, 1 do
+        self.key_queue[i][1] = 0
+        self.key_queue[i][2] = 0
+    end
+
+    for i = 1, #self.char_queue, 1 do
+        self.char_queue[i] = nil
+    end
+
+    for i = 1, #self.buffer, 1 do
+        self.buffer[i] = nil
+    end
+
+    self.speaker_enebled = false
+    self.lshift = false
+end
 
 function keyboard.new(machine)
     local self = {
@@ -164,11 +203,19 @@ function keyboard.new(machine)
         cpu = machine.components.cpu,
         update = update,
         send_key = send_key,
+        reset = reset,
         lshift = false,
-        rshift = false,
-        lcontrol = false,
-        rcontrol = false,
-        capslock = false
+        key_queue = {[0] = {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+        key_queue_start = 0,
+        key_queue_end = 0,
+        control_reg = 3,
+        data_reg = 0,
+        configuration_reg = 0x6C,
+        status_reg = 0,
+        status = 0x10,
+        speaker_enebled = false,
+        char_queue = {},
+        buffer = {},
     }
 
     local timer = 0
@@ -179,11 +226,11 @@ function keyboard.new(machine)
     self.cpu.memory[0x497] = 0 -- Keyboard LED flags
     self.cpu.memory[0x417] = 0 -- Keyboard flags 1
     self.cpu.memory[0x418] = 0 -- Keyboard flags 2
-    self.cpu:port_set(0x60, port_60)
-    self.cpu:port_set(0x61, port_61)
-    self.cpu:port_set(0x64, port_64)
-    self.cpu:register_interrupt_handler(0x9, int_9)
-    self.cpu:register_interrupt_handler(0x16, int_16)
+    self.cpu:port_set(0x60, port_60(self))
+    self.cpu:port_set(0x61, port_61(self))
+    self.cpu:port_set(0x64, port_64(self))
+    self.cpu:register_interrupt_handler(0x9, int_9(self))
+    self.cpu:register_interrupt_handler(0x16, int_16(self))
 
     events.on("retro_computers:input_manager.key_down",  function(char, ascii, code)
         if machine.is_focused then

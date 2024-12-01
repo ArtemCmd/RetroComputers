@@ -70,7 +70,7 @@ local keycodes = {
     ["left-ctrl"] = {65, 0x1D},
     ["left-alt"] = {18, 0x38},
     ["delete"] = {46, 83},
-    ["\""] = {92, 0x28},
+    ["kovichki"] = {92, 0x28},
     ["="] = {92, 0x0D}
 }
 
@@ -81,7 +81,6 @@ function manager.update()
         if is_pressed("key:" .. key) then
             events.emit("retro_computers:input_manager.key_down", key, code[1], code[2])
             key_matrix[code[2]] = true
-            break
         else
             if key_matrix[code[2]] then
                 events.emit("retro_computers:input_manager.key_up", key, code[1], code[2])

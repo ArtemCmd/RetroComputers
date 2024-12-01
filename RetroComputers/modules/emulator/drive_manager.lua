@@ -6,7 +6,6 @@ local manager = {}
 local searcher_paths = {}
 local lastid = 1
 local floppys = {}
-local items_path = "retro_computers:items/"
 
 local function load_floppy(path)
     local packid = string.split(path, ":")
@@ -15,8 +14,8 @@ local function load_floppy(path)
     local filename = settings.filename or "disk1.img"
     local readonly = settings.readonly or false
     if file.exists(path .. "/" .. filename) then
-        if not file.exists(items_path .. "floppy_" .. name .. ".json") then
-            -- logger:debug("DriveManager: Creating item")
+        if not file.exists(packid[1] .. ":items/floppy_" .. name .. ".json") then
+            logger:debug("DriveManager: Creating item")
             local path_to_item = packid[1] .. ":" .. "items/floppy_" .. name .. ".json"
             local item = {
                 ["icon-type"] = "sprite",

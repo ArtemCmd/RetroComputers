@@ -56,10 +56,6 @@ local function int_1A(cpu, ax,ah,al)
 		cpu.regs[2] = bor(lshift(1000, 8), band(bcdyears, 0xFF))
         cpu.regs[3] = bor(lshift(bcdmonths, 8), band(bcddays, 0xFF))
 		return true
-    elseif ah == 0x04 then -- Read Date
-		-- cpu.regs[2] = bor(lshift(1000, 8), band(bcdyears, 0xFF))
-        -- cpu.regs[2] = bor(lshift(bcdmonths, 8), band(bcddays, 0xFF))
-		return true
     else
 		cpu:set_flag(0)
         return false

@@ -38,7 +38,18 @@ local function port_3F7(cpu, port, value)
 end
 
 function controller.new(cpu)
-    local self = {}
+    local self = {
+        handler = {},
+        sra = 0, -- STATUS_REGISTER_A
+        srb = 0, -- STATUS_REGISTER_B
+        dor = 0, -- DIGITAL_OUTPUT_REGISTER
+        tdr = 0, -- TAPE_DRIVE_REGISTER
+        msr = 0, -- MAINSTATUS_REGISTER
+        dsr = 0, -- DATARATE_SELECT_REGISTER
+        df = 0,  -- DATA_FIFO
+        dig = 0, -- DIGITAL_INPUT_REGISTER
+        ccr = 0  -- CONFIGURATION_CONTROL_REGISTER 
+    }
     cpu:port_set(0x3F0, port_3F0)
     cpu:port_set(0x3F1, port_3F1)
     cpu:port_set(0x3F2, port_3F2)

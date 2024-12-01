@@ -24,9 +24,9 @@ local function port_address_register(channel)
     return function (cpu, port, val)
         if val then
             if flipflop then
-                ch.base_addr = bor(band(ch.base_addrm, 0xffffff00), val)
+                ch.base_addr = bor(band(ch.base_addr, 0xffffff00), val)
             else
-                ch.base_addr = bor(band(ch.base_addrm, 0xffff00ff), lshift(val, 8))
+                ch.base_addr = bor(band(ch.base_addr, 0xffff00ff), lshift(val, 8))
             end
             ch.curr_addr = ch.base_addr
             -- logger:debug("i8237: Set address register to %d", ch.curr_addr)
@@ -44,7 +44,7 @@ local function port_count_register(channel)
     local ch = channels[channel]
     return function (cpu, port, val)
         if val then
-            ch.base_addr = bor(band(ch.base_addrm, 0xffffff00), val)
+            ch.base_addr = bor(band(ch.base_addr, 0xffffff00), val)
             ch.curr_addr = ch.base_addr
             -- logger:debug("i8237: Set address register to %d", ch.curr_addr)
         else
@@ -136,15 +136,15 @@ function dma.new(cpu)
     init_channel(6)
     init_channel(7)
 
-    cpu:port_set(port_address_register(0))
-    cpu:port_set(port_address_register(2))
-    cpu:port_set(port_address_register(4))
-    cpu:port_set(port_address_register(6))
+    cpu:port_set(0x00, port_address_register(0))
+    cpu:port_set(0x02, port_address_register(1))
+    cpu:port_set(0x04, port_address_register(2))
+    cpu:port_set(0x06, port_address_register(3))
 
-    cpu:port_set(port_count_register(1))
-    cpu:port_set(port_count_register(3))
-    cpu:port_set(port_count_register(5))
-    cpu:port_set(port_count_register(7))
+    cpu:port_set(0x01, port_count_register(0))
+    cpu:port_set(0x03, port_count_register(1))
+    cpu:port_set(0x05, port_count_register(2))
+    cpu:port_set(0x07, port_count_register(3))
 
     cpu:port_set(0x81, port_81)
     cpu:port_set(0x82, port_82)

@@ -59,7 +59,7 @@ setmetatable(cga_palette, {
         if rawget(t, k) then
             return rawget(t, k)
         end
-        return {0, 0, 0, 255}
+        return {0, 255, 255, 255}
     end
 })
 
@@ -94,10 +94,10 @@ local function refresh()
     if machine then
         local height = machine.display.height
         local width = machine.display.width
-        if machine.components.videocard.get_mode() < 4 then
+        if machine.components.videocard:get_mode() < 4 then
             local cursor_x = screen.pos[1] + (machine.display.cursor_x * glyph_width)
             local cursor_y = screen.pos[2] + (machine.display.cursor_y * glyph_height + (glyph_height - cursor.size[2]))
-            -- print(screen.wpos[1], machine.display.cursor_x)
+
             for y = 0, height - 1, 1 do
                 for x = 0, width - 1, 1 do
                     local cell = machine.display.buffer[y * width + x] or {0, 0, 15}
@@ -106,7 +106,7 @@ local function refresh()
                     if cell then
                         document[index + 1].src = cache[cell[1]]
                         document[index + 1].color = cga_palette[cell[3] + 1]
-                        --document[bg_index + 1].color = cga_palette[char[2] + 1]
+                        -- document[bg_index + 1].color = cga_palette[cell[2] + 1]
                     else
                         document[index + 1].color = {0, 0, 0, 255}
                     end
@@ -150,9 +150,12 @@ local function set_resolution(x, y)
     screen:clear()
     screen.size = {x * glyph_width, y * glyph_height + 4}
     screen.wpos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
+    -- local pixels = x * y
     for i = 0, y - 1, 1 do
         for j = 0, x - 1, 1 do
             local index = i * x + j
+            -- local bg_index = pixels + index
+            -- screen:add(string.format("<image id='%s' size='%d, %d' pos='%d, %d' src='fonts/ibm_pc_8_8/glyphs/0'/>", bg_index + 1, glyph_width, glyph_height, glyph_width * j, glyph_height * i))
             screen:add(string.format("<image id='%s' size='%d, %d' pos='%d, %d' src='fonts/ibm_pc_8_8/glyphs/0'/>", index + 1, glyph_width, glyph_height, glyph_width * j, glyph_height * i))
         end
     end
@@ -178,6 +181,15 @@ function on_open(x, y, z)
             for _, v in pairs(cp437) do
                 cache[v] = "fonts/ibm_pc_8_8/glyphs/" .. v
             end
+            setmetatable(cache, {
+                __index = function (t, k)
+                    if rawget(t, k) then
+                        return rawget(t, k)
+                    else
+                        return "fonts/ibm_pc_8_8/glyphs/0"
+                    end
+                end
+            })
             is_cached = true
         end
         set_resolution(machine.display.width, machine.display.height)

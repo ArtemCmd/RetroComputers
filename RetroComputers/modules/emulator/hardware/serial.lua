@@ -41,7 +41,7 @@ local function init_serial_port(cpu, base_addr)
         else
             if dlab == 0 then
                 logger:debug("Serial: %03X: Read from serial port", base_addr)
-                return 0x65
+                return 0x00
             else
                 return band(devisor, 0x00FF)
             end
@@ -69,6 +69,7 @@ local function init_serial_port(cpu, base_addr)
             if dlab == 0 then
                 return ier
             end
+            return 0xFF
         end
     end)
 
