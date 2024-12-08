@@ -1,5 +1,5 @@
 {
-    "name": "PCDOS3",
-    "filename": "Disk01.img",
+    "name": ["PC DOS 3.20 1", "PC DOS 3.20 2"],
+    "filename": ["PCDOS320-DISK1.img", "PCDOS320-DISK2.img"],
     "readonly": true
 }

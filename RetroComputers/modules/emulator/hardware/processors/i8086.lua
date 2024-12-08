@@ -64,22 +64,19 @@ local function cpu_flag(self, t)
     return band(self.flags, lshift(1, t)) ~= 0
 end
 
-
 local function cpu_clear_flag(self, t)
-    self.flags = band(self.flags, bxor(self.flags, lshift(1, t)))
+    self.flags = band(self.flags, bnot(lshift(1, t)))
 end
-
 
 local function cpu_set_flag(self, t)
     self.flags = bor(self.flags, lshift(1, t))
 end
 
-
 local function cpu_write_flag(self, t, v)
     if v then
-        self.flags = bor(self.flags, lshift(1, t))
+        cpu_set_flag(self, t)
     else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, t)))
+        cpu_clear_flag(self, t)
     end
 end
 
@@ -1794,7 +1791,15 @@ local function reset(self)
     self.ip = 0
     self.intqueue = {}
 
-    for i=0, 255 do
+    for i = 0, 255, 1 do
+        if interrupt_handlers[i+1] then
+            self.memory[0xF1100+i] = 0x90
+        else
+            self.memory[0xF1100+i] = 0xCF
+        end
+    end
+
+    for i = 0, 255 do
         self.memory:w16(i*4, 0x1100 + i)
         self.memory:w16(i*4 + 2, 0xF000)
     end
@@ -1837,18 +1842,18 @@ function cpu.new(memory)
         instance.seg_ss, instance.seg_ds
     }
 
-    for i=0,255 do
-        if interrupt_handlers[i+1] then
-            memory[0xF1100+i] = 0x90
-        else
-            memory[0xF1100+i] = 0xCF
-        end
-    end
+    -- for i=0,255 do
+    --     if interrupt_handlers[i+1] then
+    --         memory[0xF1100+i] = 0x90
+    --     else
+    --         memory[0xF1100+i] = 0xCF
+    --     end
+    -- end
 
-    for i=0, 255 do
-        memory:w16(i*4, 0x1100 + i)
-        memory:w16(i*4 + 2, 0xF000)
-    end
+    -- for i=0, 255 do
+    --     memory:w16(i*4, 0x1100 + i)
+    --     memory:w16(i*4 + 2, 0xF000)
+    -- end
     return instance
 end
 

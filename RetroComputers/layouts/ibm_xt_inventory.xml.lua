@@ -1,4 +1,4 @@
----@diagnostic disable: undefined-field
+---@diagnostic disable: undefined-field, lowercase-global
 local logger = require("retro_computers:logger")
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local drivemanager = require("retro_computers:emulator/drive_manager")
@@ -11,9 +11,10 @@ local function insert_drive(slot)
         if item_name ~= "core:empty" then
             local floppy = drivemanager.get_floppy(name)
             if floppy then
-                machine.insert_floppy(floppy, slot)
-                -- logger:debug("Insert floppy %s", name)
+                machine:insert_floppy(floppy, slot)
             end
+        else
+            machine:eject_floppy(slot)
         end
     else
         logger:error("Machine not found")

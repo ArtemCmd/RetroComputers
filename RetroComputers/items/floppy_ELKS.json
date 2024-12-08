@@ -1,4 +1,5 @@
 {
   "icon-type": "sprite",
-  "icon": "items:floppy_2"
+  "icon": "items:floppy_2",
+  "stack-size": 1
 }

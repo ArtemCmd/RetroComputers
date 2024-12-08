@@ -2,7 +2,6 @@
 local input_manager = require("retro_computers:emulator/input_manager")
 
 local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
-local is_pressed = input.is_pressed
 
 local function send(self, char, code)
     -- logger:debug("Keybooard XT: Key = %s, Scancode = %02X, ASCII = %02X, lShift=%s, Key Queue End = %d", string.char(char),code, char, self.lshift, self.key_queue_end)
@@ -29,7 +28,7 @@ end
 local function get_keys_status(self, ks)
 	local keys = 0
 	for i = 1, #ks, 1 do
-        if is_pressed("key:" .. ks[i]) and self.machine.is_focused then
+        if input_manager.is_pressed("key:" .. ks[i]) and self.machine.is_focused then
 			keys = bor(keys, lshift(1, (i - 1)))
 		end
 	end
@@ -37,7 +36,7 @@ local function get_keys_status(self, ks)
 end
 
 local function update(self)
-    self.cpu.memory[0x417] = get_keys_status(self, {"left-shift", "nil", "nil", "nil", "nil", "nil", "caps-lock", "nil"}) -- Shift, Ctrl, Alt, ScrollLock, NumLock, CapsLock, Insert
+    self.cpu.memory[0x417] = get_keys_status(self, {42}) -- Shift, Ctrl, Alt, ScrollLock, NumLock, CapsLock, Insert
 	-- self.cpu.memory[0x418] = get_keys_status(self, {"nil", "nil", "nil", "nil", "nil", "nil", "nil", "nil"}) -- lShift + Ctrl, lShift + Alt, Sysreq, Pause, ScrollLock, NumLock, CapsLock, Insert
     if (#self.buffer > 0) then
         local key =  table.remove(self.buffer, 1)
@@ -111,6 +110,7 @@ local function int_16(self)
                 end
                 return true
             else
+                self.wait_for_key_press = true
                 cpu:set_flag(6)
                 return true
             end
@@ -215,7 +215,7 @@ function keyboard.new(machine)
         status = 0x10,
         speaker_enebled = false,
         char_queue = {},
-        buffer = {},
+        buffer = {}
     }
 
     local timer = 0

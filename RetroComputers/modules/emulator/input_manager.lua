@@ -54,7 +54,7 @@ local keycodes = {
     ["8"] = {56, 9},
     ["9"] = {57, 10},
     ["0"] = {48, 11},
-    ["-"] = {189, 0x0C},
+    ["-"] = {45, 0x0C},
 
     ["left-shift"] = {42, 0x2A},
     ["f1"] = {189, 0x3b},
@@ -65,7 +65,7 @@ local keycodes = {
     ["down"] = {80, 0x50},
     ["["] = {0, 0x1A},
     ["]"] = {0, 0x1B},
-    ["*"] = {0, 0x37},
+    ["*"] = {42, 0x37},
 
     ["left-ctrl"] = {65, 0x1D},
     ["left-alt"] = {18, 0x38},
@@ -88,6 +88,10 @@ function manager.update()
             end
         end
     end
+end
+
+function manager.is_pressed(scancode)
+    return key_matrix[scancode]
 end
 
 function manager.get_keycode(key)

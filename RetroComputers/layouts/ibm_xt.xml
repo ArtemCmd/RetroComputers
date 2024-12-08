@@ -1,6 +1,7 @@
 <container size='640,630'>
     <container id='updater'/>
     <container id='screen' size='640,600' color='#000000FF'/>
+    <!-- <image id='screen_graphics' size='320,200' color='#000000FF' src='retro_computers:screen'/> -->
     <image id='cursor' pos='100, 100' size='8, 2' color='#AAAAAA' visible='false'/>
 
     <container id='control_panel' pos='0, 600' size='545,30' color='#222121'>

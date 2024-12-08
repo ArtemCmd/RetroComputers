@@ -9,7 +9,9 @@ local default = {
     page_width = 200,
     page_height = 300,
     create_page_item = false,
-    font_scale = 1.0
+    font_scale = 1.0,
+    check_for_updates = false,
+    enable_screen_3d = true
 }
 
 function config.save()

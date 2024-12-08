@@ -12,12 +12,21 @@ local function read(self, count)
     return self.buffer:get_bytes(count)
 end
 
-local function write(self, bytes)
-    self.buffer:put_byte(bytes)
+local function write(self, byte)
+    self.buffer:put_byte(byte)
+end
+
+local function write_bytes(self, bytes)
+    self.buffer:put_bytes(bytes)
 end
 
 local function flush(self)
     file.write_bytes(self.path, self.buffer:get_bytes())
+end
+
+local function close(self)
+    self:flush()
+    handlers[self.path] = nil
 end
 
 function filesytem.open(path)
@@ -27,7 +36,9 @@ function filesytem.open(path)
             set_position = set_position,
             read = read,
             write = write,
-            flush = flush
+            write_bytes = write_bytes,
+            flush = flush,
+            close = close
         }
         if file.exists(path) then
             local reason, result = pcall(file.read_bytes, path)

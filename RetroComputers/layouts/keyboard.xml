@@ -1,5 +1,5 @@
-<container size='1280,800' gravity='center-center'>
-    <container id='sc_keyboard' gravity='center-center' size='725,190' color='#222121'>
+<container size='725,190' color='#222121' gravity='center-center'>
+    <!-- <container id='sc_keyboard' gravity='center-center' size='725,190' color='#222121'> -->
         <button  pos='5, 5' size='30, 20' onclick='button_key("esc")'>ESC</button>
         <button  pos='40, 5' size='30, 20' onclick='button_key("f1")'>F1</button>
         <button  pos='75, 5' size='30, 20' onclick='button_key("f2")'>F2</button>
@@ -111,5 +111,5 @@
         <textbox pos='5, 155' id='clipboard' multiline='true' text-wrap='false' editable='true' size='445, 24'/>
         <button pos='455, 155' size='130, 24' onclick='send_text()'>Отправить текст</button>
         <button pos='590, 155' size='130, 24' onclick='button_close()'>Закрыть</button>
-    </container>
+    <!-- </container> -->
 </container>

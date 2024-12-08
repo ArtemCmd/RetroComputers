@@ -41,11 +41,9 @@ function vmmanager.save()
 end
 
 function vmmanager.update()
-    for i = 0, #vms do
+    for i = 1, #vms do
         local machine = vms[i]
-        if machine then
-            machine:update()
-        end
+        machine:update()
     end
 end
 

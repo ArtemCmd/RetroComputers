@@ -11,9 +11,9 @@ local machine = nil
 
 local function update_keyboard()
     local mouse_pos = input.get_mouse_pos()
-    local keyboard = document.sc_keyboard
+    local keyboard = document.root
 
-    if mouse_pos[1] >= keyboard.pos[1] and mouse_pos[1] <= keyboard.pos[1] + keyboard.size[1] and mouse_pos[2] >= keyboard.pos[2] and mouse_pos[2] <= keyboard.pos[2] + keyboard.size[2] then
+    if (mouse_pos[1] >= keyboard.pos[1]) and (mouse_pos[1] <= keyboard.pos[1] + keyboard.size[1]) and (mouse_pos[2] >= keyboard.pos[2]) and (mouse_pos[2] <= keyboard.pos[2] + keyboard.size[2]) then
         if is_pressed("mouse:left") then
             if not pressed then
                 pos = {mouse_pos[1] - keyboard.pos[1], mouse_pos[2] - keyboard.pos[2]}
@@ -72,7 +72,7 @@ function send_text()
 end
 
 function on_open()
-    local keyboard = document.sc_keyboard
+    local keyboard = document.root
     if not initilized then
         keyboard:setInterval(config.screen_keyboard_delay, update_keyboard)
         initilized = true

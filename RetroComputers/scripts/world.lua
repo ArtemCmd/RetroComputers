@@ -79,10 +79,13 @@ function on_world_open()
     console.add_command("retro_computers.config.set name:str value:int", "Set configuration", function (args, kwargs)
         local name = args[1]
         local val = args[2]
-        if config[name] then
+        if config[name] ~= nil then
             if type(config[name]) == "number" then
                 config[name] = val
                 console.log("Key " .. name .. " set to " .. val)
+            elseif type(config[name]) == "boolean" then
+                config[name] = (val == 1)
+                console.log("Key " .. name .. " set to " .. tostring(val == 1))
             else
                 console.log("Failed set " .. name)
             end
@@ -95,6 +98,27 @@ function on_world_open()
         config.save()
         console.log("Config saved")
     end)
+
+    -- DriveManager
+    console.add_command("retro_computers.drive_manager.create_hard_disk path:str fileformat:str sector_size:int cylinders:int heads:int sectors:int", "Creates a hard disk image.\nSupported file formats: RAW, HDF", function (args, kwargs)
+        if drive_manager.create_hard_disk(args[1], args[4], args[5], args[6], args[3], args[2]) then
+            console.log("Creation successful")
+        else
+            console.log("Creation failed")
+        end
+    end)
+
+    -- Checking update
+    if config.check_for_updates then
+        network.get("https://raw.githubusercontent.com/ArtemCmd/RetroComputers/main/RetroComputers/package.json", function (str)
+            local data = json.parse(str)
+            local package = json.parse(file.read("retro_computers:package.json"))
+            if data.version ~= package.version then
+                logger:info("Found a new version on https://github.com/ArtemCmd/RetroComputers/tree/main")
+                console.log("Found a new version on https://github.com/ArtemCmd/RetroComputers/tree/main")
+            end
+        end)
+    end
 end
 
 function on_world_tick()

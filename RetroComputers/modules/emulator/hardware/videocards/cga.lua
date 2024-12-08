@@ -11,6 +11,20 @@ local reg_to_mode = {
     [5] = 0x06, -- 320x200 alt graphics
     [6] = 0x16 -- 640x200 graphics
 }
+-- Font
+local font_8_8 = {}
+for _, v in pairs(cp437) do
+    font_8_8[v] = "fonts/ibm_pc_8_8/glyphs/" .. v
+end
+setmetatable(font_8_8, {
+    __index = function (t, k)
+        if rawget(t, k) then
+            return rawget(t, k)
+        else
+            return "fonts/ibm_pc_8_8/glyphs/0"
+        end
+    end
+})
 
 local function vram_read(self, addr)
     -- logger:debug("CGA: Read from vram")
@@ -87,30 +101,45 @@ local function set_mode(self, cpu, vmode, clear)
         cpu.memory[0x449] = self.mode
 
         -- 0x44A - word, text width
-        if vmode == 2 or vmode == 3 then
+        if (vmode == 2) or (vmode == 3) then
             cpu.memory[0x44A] = 80
             self.display.width = 80
-        else
+            self.display.height = 25
+        elseif (vmode == 1) or (vmode == 0) then
             cpu.memory[0x44A] = 40
             self.display.width = 40
+            self.display.height = 25
+        elseif (vmode == 4) or (vmode == 5) then
+            self.display.width = 320
+            self.display.height = 200
+        elseif vmode == 6 then
+            self.display.width = 640
+            self.display.height = 200
         end
+
         cpu.memory[0x44B] = 0
         cpu.memory[0x465] = self.mode
         cpu.memory[0x466] = self.palette
 
         if clear then
             if (vmode >= 0 and vmode <= 3) then
-                for y=0,24 do
-                    for x=0,cpu.memory[0x44A]-1 do
+                for y = 0, 24, 1 do
+                    for x = 0, cpu.memory[0x44A] - 1, 1 do
                         cpu.memory:w16(get_text_addr(x,y), 0x0700)
                     end
                 end
             else
-                for i=0,7999 do
+                for i = 0, 7999, 1 do
                     cpu.memory[0xB8000 + i] = 0
                     cpu.memory[0xBA000 + i] = 0
                 end
             end
+        end
+
+        if self.vmode < 4 then
+            self.textmode = true
+        else
+            self.textmode = false
         end
         return true
 	else
@@ -261,7 +290,7 @@ local function int_10(self)
             local cursor_x, cursor_y = get_cursor_pos(cpu, rshift(cpu.regs[4], 8))
             local addr = get_text_addr(cursor_x, cursor_y)
             local bl = band(cpu.regs[4], 0xFF)
-            for i=1,cpu.regs[2] do
+            for _ = 1, cpu.regs[2], 1 do
                 cpu.memory[addr] = al
                 if ah == 0x09 then
                     cpu.memory[addr + 1] = bl
@@ -281,15 +310,19 @@ local function int_10(self)
             cpu.memory[0x466] = p
             return true
         elseif ah == 0x0C then -- Write Graphics Pixel
-            -- TODO
-            -- if self.mode > 3 then
-                -- local x = cpu.regs[3]
-                -- local y = cpu.regs[2]
-                -- local color = band(cpu.regs[1], 0xFF)
-            -- end
+            if self.mode > 3 then
+                local x = cpu.regs[3]
+                local y = cpu.regs[2]
+                local color = band(cpu.regs[1], 0xFF)
+                self.vram[(0xB8000 - 0x9FFFF) + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 2)] = color
+            end
             return false
         elseif ah == 0x0C then -- Read Graphics Pixel
-            -- TODO
+            if self.mode > 3 then
+                local x = cpu.regs[3]
+                local y = cpu.regs[2]
+                cpu.regs[1] = bor(lshift(ah, 8), self.vram[(0xB8000 - 0x9FFFF) + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 2)])
+            end
             return false
         elseif ah == 0x0E then -- Write Character in TTY Mode
             local cursor_x, cursor_y = get_cursor_pos(cpu)
@@ -344,8 +377,8 @@ local function render_text(self, addr, width, height)
 	for y = 0, height - 1, 1 do
 		local base = addr + (y * 160)
 		for x = 0, width - 1, 1 do
-			local chr = cp437[self.vram[base + x*2] or 0]
-			local atr = self.vram[base + x*2 + 1] or 0
+			local chr = cp437[self.vram[base + x * 2] or 0]
+			local atr = self.vram[base + x * 2 + 1] or 0
             local bg = rshift(band(atr, 0xFF00), 8)
 			local fg = band(atr, 0x00FF)
             self.display.buffer[y * width + x] = {chr, bg, fg}
@@ -405,7 +438,7 @@ local function reset(self)
     self.cpu.memory:w16(0x463, 0x3D4)
 end
 
-function videocard.new(cpu, d)
+function videocard.new(cpu, display)
     local self = {
         cpu = cpu,
         vram = {},
@@ -415,14 +448,48 @@ function videocard.new(cpu, d)
         palette = 0x30,
         crtc_index = 0,
         cursor = 0,
-        display = d,
+        display = display,
         set_mode = set_mode,
         update = update,
         reset = reset,
         vram_read = vram_read,
         vram_write = vram_write,
-        get_mode = get_mode
+        get_mode = get_mode,
+        textmode = true,
+        start_addr = 0xB8000,
+        end_addr = 0xBFFFF,
+        -- Font
+        font = font_8_8,
+        glyph_width = 8,
+        glyph_height = 8,
+        color_palette = {
+            {0, 0, 0, 255}, -- black
+            {0, 0, 170, 255}, -- blue
+            {0, 170, 0, 255}, -- green
+            {0, 170, 170, 255}, -- cyan
+            {170, 0, 0, 255}, -- red
+            {170, 0, 170, 255}, -- magenta
+            {170, 85, 0, 255}, -- brown
+            {170, 170, 170, 255}, -- light gray
+            {85, 85, 85, 255}, -- dark gray
+            {85, 85, 255, 255}, -- light blue
+            {85, 255, 85, 255}, -- light green
+            {85, 255, 255, 255}, -- light cyan
+            {255, 85, 85, 255}, -- light red
+            {255, 85, 255, 255}, -- light magenta
+            {255, 255, 85, 255}, -- yellow
+            {255, 255, 255, 255} -- white
+        }
     }
+    setmetatable(self.color_palette, {
+        __index = function (t, k)
+            if rawget(t, k) then
+                return rawget(t, k)
+            end
+            return {0, 255, 255, 255}
+        end
+    })
+
     cpu:register_interrupt_handler(0x10, int_10(self))
 
     cpu:port_set(0x3D4, port_3D4(self))
