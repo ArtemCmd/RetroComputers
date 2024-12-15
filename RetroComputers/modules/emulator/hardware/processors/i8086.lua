@@ -3,7 +3,7 @@
 local logger = require("retro_computers:logger")
 
 local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
-local io_ports = {}
+-- local io_ports = {}
 local run_one = function (self, a, b) end
 
 local function emit_interrupt(self, v, nmi)
@@ -394,10 +394,8 @@ local function cpu_uf_bit(self, vr, opc)
     cpu_zsp(self, vr, opc)
 end
 
-local cpu_shift_mask = 0xFF
-
 local function cpu_shl(self, mrm, opcode)
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), cpu_shift_mask)
+    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
     if v1 >= 1 then
         local v2 = cpu_read_rm(self, mrm, mrm.dst)
         local w = band(opcode, 0x01)
@@ -421,7 +419,7 @@ local function cpu_shr(self, mrm, opcode, arith)
     local mask = 0x8000
     if w == 0 then mask = 0x80 end
 
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), cpu_shift_mask)
+    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr
     if (arith) then
@@ -457,7 +455,7 @@ local function cpu_rotate(self, mrm, opcode, mode)
     local shift = 15
     if w == 0 then shift = 7 end
 
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), cpu_shift_mask)
+    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
     local v2 = cpu_read_rm(self, mrm, mrm.dst)
     local vr = v2
     local cf = 0
@@ -746,8 +744,8 @@ local function cpu_rep(self, cond)
     return true
 end
 
-local function cpu_in(port)
-    local p = io_ports[port]
+local function cpu_in(self, port)
+    local p = self.io_ports[port]
     -- logger:debug("i8086: Cpu in: port:%02X", port)
     if p == nil then
         logger:warning("i8086: Cpu in: port:%02X not found", port)
@@ -760,24 +758,24 @@ local function cpu_in(port)
 end
 
 local function cpu_out(self, port, val)
-    local p = io_ports[port]
+    local p = self.io_ports[port]
     -- logger:warning("i8086: Cpu out: port:%02X", port)
     if type(p) == "function" then
         p(self, port, val)
     elseif p ~= nil then
-        io_ports[port+1] = val
+        self.io_ports[port+1] = val
     else
        logger:warning("i8086: Cpu out: port:%02X not found", port)
     end
 end
 
 local function port_get(self, port)
-    return io_ports[port]
+    return self.io_ports[port]
 end
 
 local function port_set(self, port, value, value2)
     if type(value) == "function" and type(value2) == "function" then
-        io_ports[port+1] = function(cpu, port, v)
+        self.io_ports[port + 1] = function(cpu, port, v)
             if v then
                 value(cpu, port,v)
             else
@@ -785,14 +783,12 @@ local function port_set(self, port, value, value2)
             end
         end
     else
-        io_ports[port] = value
+        self.io_ports[port] = value
     end
 end
 
-local interrupt_handlers = {}
-
 local function register_interrupt_handler(self, id, handler)
-    interrupt_handlers[id + 1] = handler
+    self.interrupt_handlers[id + 1] = handler
 end
 
 local function cpu_int_fake(self, id)
@@ -800,10 +796,10 @@ local function cpu_int_fake(self, id)
     local ah = rshift(ax, 8)
     local al = band(ax, 0xFF)
 
-    local h = interrupt_handlers[id + 1]
+    local h = self.interrupt_handlers[id + 1]
     -- logger:warning("i8086: Interrupt: %02X, AH = %02X", id, ah)
     if h then
-        local r = h(self, ax,ah,al)
+        local r = h(self, ax, ah, al)
         if r then
             return r
         end
@@ -1048,11 +1044,6 @@ opcode_map[0x5C] = function(self, opcode) self.regs[5] = cpu_pop16(self) end
 opcode_map[0x5D] = function(self, opcode) self.regs[6] = cpu_pop16(self) end
 opcode_map[0x5E] = function(self, opcode) self.regs[7] = cpu_pop16(self) end
 opcode_map[0x5F] = function(self, opcode) self.regs[8] = cpu_pop16(self) end
-
--- PUSH SP (8086 bug reproduction)
-opcode_map[0x54] = function(self, opcode)
-    cpu_push16(self, self.regs[5] - 2)
-end
 
 -- JMP
 for i=0x70,0x7F do
@@ -1376,6 +1367,7 @@ end
 
 -- INT 3
 opcode_map[0xCC] = function(self, opcode)
+    self:emit_interrupt(0x03, false)
 end
 
 -- INT imm
@@ -1492,12 +1484,12 @@ end
 
 -- IN AL, Ib
 opcode_map[0xE4] = function(self, opcode)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(advance_ip(self)), 0xFF))
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(self, advance_ip(self)), 0xFF))
 end
 
 -- IN AX, Ib
 opcode_map[0xE5] = function(self, opcode)
-    self.regs[1] = band(cpu_in(advance_ip(self)), 0xFFFF)
+    self.regs[1] = band(cpu_in(self, advance_ip(self)), 0xFFFF)
 end
 
 -- OUT AL, Ib
@@ -1539,12 +1531,12 @@ end
 
 -- IN AL, DX
 opcode_map[0xEC] = function(self, opcode)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(self.regs[3]), 0xFF))
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(self, self.regs[3]), 0xFF))
 end
 
 -- IN AX, DX
 opcode_map[0xED] = function(self, opcode)
-    self.regs[1] = band(cpu_in(self.regs[3]), 0xFFFF)
+    self.regs[1] = band(cpu_in(self, self.regs[3]), 0xFFFF)
 end
 
 -- OUT AL, DX
@@ -1644,12 +1636,12 @@ opcode_map[0xF6] = function(self, opcode)
 end
 opcode_map[0xF7] = opcode_map[0xF6]
 
--- flag setters
-opcode_map[0xF8] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, (0)))) end
+-- Flag setters
+opcode_map[0xF8] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 0))) end
 opcode_map[0xF9] = function(self, opcode) self.flags = bor(self.flags, lshift(1, (0))) end
-opcode_map[0xFA] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, (9)))) end
-opcode_map[0xFB] = function(self, opcode) self.flags = bor(self.flags, lshift(1, (9))) end
-opcode_map[0xFC] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, (10)))) end
+opcode_map[0xFA] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 9))) end
+opcode_map[0xFB] = function(self, opcode) self.flags = bor(self.flags, lshift(1, 9)) end
+opcode_map[0xFC] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 10))) end
 opcode_map[0xFD] = function(self, opcode) self.flags = bor(self.flags, lshift(1, (10))) end
 
 -- GRP4
@@ -1721,7 +1713,7 @@ opcode_map[0xC1] = opcode_map[0xC3]
 opcode_map[0xC8] = opcode_map[0xCA]
 opcode_map[0xC9] = opcode_map[0xCB]
 
-run_one = function(self, no_interrupting, pr_state)
+run_one = function(self, no_interrupting)
     if self.hasint and not no_interrupting then
         local intr = self.intqueue[1]
         if intr ~= nil then
@@ -1748,6 +1740,10 @@ run_one = function(self, no_interrupting, pr_state)
         end
     end
 
+    if self.halted then
+        return -1
+    end
+
     local opcode = advance_ip(self)
     -- logger:error("i8086: Opcode: %02X", opcode)
     local om = opcode_map[opcode]
@@ -1765,16 +1761,6 @@ run_one = function(self, no_interrupting, pr_state)
     end
 end
 
-local function emit_interrupt(self, v, nmi)
-    nmi = (v == 2)
-    if nmi then
-        table.insert(self.intqueue, v + 256)
-    else
-        table.insert(self.intqueue, v)
-    end
-    self.hasint = true
-end
-
 local cpu = {}
 
 local function reset(self)
@@ -1790,24 +1776,11 @@ local function reset(self)
     self.seg_ds = 3
     self.ip = 0
     self.intqueue = {}
-
-    for i = 0, 255, 1 do
-        if interrupt_handlers[i+1] then
-            self.memory[0xF1100+i] = 0x90
-        else
-            self.memory[0xF1100+i] = 0xCF
-        end
-    end
-
-    for i = 0, 255 do
-        self.memory:w16(i*4, 0x1100 + i)
-        self.memory:w16(i*4 + 2, 0xF000)
-    end
 end
 
 function cpu.new(memory)
-    local instance = {
-        regs = {0, 0, 0, 0, 0, 0, 0, 0},
+    local self = {
+        regs = {0, 0, 0, 0, 0, 0, 0, 0}, -- AX, CX, DX, BX, SP, BP, SI, DI
         segments = {0, 0, 0, 0, 0, 0},
         seg_es = 0,
         seg_cs = 1,
@@ -1821,7 +1794,9 @@ function cpu.new(memory)
         halted = false,
         memory = memory,
         intqueue = {},
+        interrupt_handlers = {},
         reset = reset,
+        io_ports = {},
 
         run_one = run_one,
         register_interrupt_handler = register_interrupt_handler,
@@ -1835,26 +1810,14 @@ function cpu.new(memory)
         seg = seg,
     }
 
-    instance.rm_seg_t = {
-        instance.seg_ds, instance.seg_ds,
-        instance.seg_ss, instance.seg_ss,
-        instance.seg_ds, instance.seg_ds,
-        instance.seg_ss, instance.seg_ds
+    self.rm_seg_t = {
+        self.seg_ds, self.seg_ds,
+        self.seg_ss, self.seg_ss,
+        self.seg_ds, self.seg_ds,
+        self.seg_ss, self.seg_ds
     }
 
-    -- for i=0,255 do
-    --     if interrupt_handlers[i+1] then
-    --         memory[0xF1100+i] = 0x90
-    --     else
-    --         memory[0xF1100+i] = 0xCF
-    --     end
-    -- end
-
-    -- for i=0, 255 do
-    --     memory:w16(i*4, 0x1100 + i)
-    --     memory:w16(i*4 + 2, 0xF000)
-    -- end
-    return instance
+    return self
 end
 
 return cpu

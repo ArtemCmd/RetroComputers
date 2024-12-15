@@ -54,6 +54,7 @@ local function init_disk(self, cpu, drive)
 			drive.cylinders = 40
 		else
 			logger:error("Disks: Unknown floppy size: " .. drive.size)
+            return
 		end
 	else
         if (drive.sector_size == 0) and (drive.cylinders == 0) and (drive.heads == 0) and (drive.sectors == 0) then
@@ -82,13 +83,14 @@ local function init_disk(self, cpu, drive)
         end
 
 		if drive.cylinders <= 0 then
-			logger:error("Disks: Unknown disk size: " .. drive.size)
+			logger:error("Disks: Unknown disk size: %d", drive.size)
+            return
 		end
 	end
-	logger:info("Disks: Added new drive: CHS:%d,%d,%d Sector size:%d ID:%x Size: %d", drive.cylinders, drive.heads, drive.sectors, drive.sector_size, drive.id, drive.size)
+	logger:info("Disks: Added new drive: CHS: = %d,%d,%d, Sector size = %d, ID = %x, Size = %d, Readonly = %s", drive.cylinders, drive.heads, drive.sectors, drive.sector_size, drive.id, drive.size, drive.readonly)
 
 	-- Сonfigure table
-	local tba = 0xF2000 + drive.id*16
+	local tba = 0xF2000 + drive.id * 16
 	if drive.id == 0x80 then
 		cpu.memory:w16(0x0104, band(tba, 0xFFFF))
 		cpu.memory:w16(0x0106, 0xF000)
@@ -217,7 +219,7 @@ local function int_13(self)
                 end
 
                 if sector == 0 or sector > drive.sectors or head >= drive.heads or cylinder >= drive.cylinders then
-                    logger:error("Disks: Out of bounds - %02X, CHS = %d, %d, %d", drive, cylinder, head, sector)
+                    logger:error("Disks: Disk %02X: Out of bounds, CHS = %d, %d, %d", drive_id, cylinder, head, sector)
                     ret_status(self, cpu, 4)
                     return true
                 end
@@ -255,14 +257,14 @@ local function int_13(self)
                     return true
                 end
 
-                if drive.readonly then
-                    ret_status(self, cpu, 3)
+                if sector == 0 or sector > drive.sectors or head >= drive.heads or cylinder >= drive.cylinders then
+                    ret_status(self, cpu, 4)
+                    logger:error("Disks: Disk %02X: Out of bounds, CHS = %d, %d, %d", drive_id, cylinder, head, sector)
                     return true
                 end
 
-                if sector == 0 or sector > drive.sectors or head >= drive.heads or cylinder >= drive.cylinders then
-                    ret_status(self, cpu, 4)
-                    logger:error("Disks: Out of bounds - %02X, CHS = %d, %d, %d", drive, cylinder, head, sector)
+                if drive.readonly then
+                    ret_status(self, cpu, 0x03)
                     return true
                 end
 

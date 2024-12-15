@@ -13,8 +13,8 @@ local reg_to_mode = {
 }
 -- Font
 local font_8_8 = {}
-for _, v in pairs(cp437) do
-    font_8_8[v] = "fonts/ibm_pc_8_8/glyphs/" .. v
+for _, code in pairs(cp437) do
+    font_8_8[code] = "fonts/ibm_pc_8_8/glyphs/" .. code
 end
 setmetatable(font_8_8, {
     __index = function (t, k)
@@ -28,15 +28,15 @@ setmetatable(font_8_8, {
 
 local function vram_read(self, addr)
     -- logger:debug("CGA: Read from vram")
-	return self.vram[addr - 0x9FFFF] or 0
+	return self.vram[addr - 0xB8000] or 0
 end
 
 local function vram_write(self, addr, val)
-    -- logger:debug("CGA: Write %s to vram", string.char(val))
-	if self.vram[addr - 0x9FFFF] == val then
+    -- logger:debug("CGA: Write %d to vram", val)
+	if self.vram[addr - 0xB8000] == val then
         return
     end
-	self.vram[addr - 0x9FFFF] = val
+	self.vram[addr - 0xB8000] = val
 end
 
 local function get_text_addr(x, y)
@@ -90,7 +90,7 @@ local function get_mode(self)
 end
 
 local function set_mode(self, cpu, vmode, clear)
-    logger:debug("CGA: Attempt to set video mode: %02X", vmode)
+    logger:debug("CGA: Trying to set video mode: %02X", vmode)
     -- vmode = 3
 	if (vmode >= 0) and (vmode <= 6) then
         self.vmode = vmode
@@ -125,7 +125,7 @@ local function set_mode(self, cpu, vmode, clear)
             if (vmode >= 0 and vmode <= 3) then
                 for y = 0, 24, 1 do
                     for x = 0, cpu.memory[0x44A] - 1, 1 do
-                        cpu.memory:w16(get_text_addr(x,y), 0x0700)
+                        cpu.memory:w16(get_text_addr(x, y), 0x0700)
                     end
                 end
             else
@@ -141,6 +141,8 @@ local function set_mode(self, cpu, vmode, clear)
         else
             self.textmode = false
         end
+
+        self.display.set_resolution(self.display.width, self.display.height, not self.textmode)
         return true
 	else
         return false
@@ -204,6 +206,7 @@ end
 -- Mode
 local function port_3D8(self)
     return function(cpu, port, val)
+        -- logger:debug("CGA: Write %d to port 0x3D8", val)
         if val then
             self.mode = band(val, 0x3F)
             for i = 0, 6 do
@@ -254,12 +257,14 @@ end
 
 -- Interrupt
 local function int_10(self)
-    return function(cpu, ax,ah,al)
+    return function(cpu, ax, ah, al)
+        -- logger:debug("CGA: Interrupt 10h, AH = %02X", ah)
         if ah == 0x00 then -- Set video mode
             local mode = band(al, 0xFF7F)
             set_mode(self, cpu, mode, band(al, 0x80) == 0)
             return true
         elseif ah == 0x01 then -- Set cursor shape, TODO
+            -- local cursor_on = band(band(cpu.regs[2], 0xFF), 16)
             return true
         elseif ah == 0x02 then -- Set cursor position
             set_cursor_pos(self, cpu, band(cpu.regs[3], 0xFF), rshift(cpu.regs[3], 8), rshift(cpu.regs[4], 8))
@@ -269,7 +274,7 @@ local function int_10(self)
             cpu.regs[3] = bor(lshift(cursor_y, 8), (cursor_x))
             return true
         elseif ah == 0x04 then -- Query light pen
-            cpu.regs[1] = 0
+            cpu.regs[1] = rshift(cpu.regs[1], 8)
             return true
         elseif ah == 0x05 then  -- Select video page
             cpu.memory[0x462] = band(al, 0x07)
@@ -284,18 +289,23 @@ local function int_10(self)
             local cursor_x, cursor_y = get_cursor_pos(cpu, rshift(cpu.regs[4], 8))
             local addr = get_text_addr(cursor_x, cursor_y)
             cpu.regs[1] = bor(0x0800, cpu.memory[addr])
-            cpu.regs[4] = bor(band(cpu.regs[4], 0xFF), lshift(cpu.memory[addr + 1], 8))
+            if self.vmode < 4 then
+                cpu.regs[4] = bor(band(cpu.regs[4], 0xFF), lshift(cpu.memory[addr + 1], 8))
+            end
             return true
         elseif ah == 0x09 or ah == 0x0A then  -- Write character/attribute (0x09) or char (0x0A)
             local cursor_x, cursor_y = get_cursor_pos(cpu, rshift(cpu.regs[4], 8))
             local addr = get_text_addr(cursor_x, cursor_y)
             local bl = band(cpu.regs[4], 0xFF)
-            for _ = 1, cpu.regs[2], 1 do
-                cpu.memory[addr] = al
-                if ah == 0x09 then
-                    cpu.memory[addr + 1] = bl
+
+            if self.mode < 4 then
+                for _ = 1, cpu.regs[2], 1 do
+                    cpu.memory[addr] = al
+                    if ah == 0x09 then
+                        cpu.memory[addr + 1] = bl
+                    end
+                    addr = addr + 2
                 end
-                addr = addr + 2
             end
             return true
         elseif ah == 0x0B then -- Configure videomode
@@ -310,60 +320,73 @@ local function int_10(self)
             cpu.memory[0x466] = p
             return true
         elseif ah == 0x0C then -- Write Graphics Pixel
-            if self.mode > 3 then
+            if self.vmode > 3 then
                 local x = cpu.regs[3]
                 local y = cpu.regs[2]
                 local color = band(cpu.regs[1], 0xFF)
-                self.vram[(0xB8000 - 0x9FFFF) + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 2)] = color
+                if self.vmode == 6 then
+                    self.vram[(rshift(y, 1) * 80) + (band(y, 1) * 8192) + rshift(x, 3)] = band(color, 1)
+                else
+                    self.vram[(rshift(y, 1) * 80) + (band(y, 1) * 8192) + rshift(x, 2)] = band(color, 3)
+                end
+                -- logger:debug("CGA: Interrupt 16h, AH = 0Ch, X = %d, Y = %d, Color = %d", x, y, color)
             end
-            return false
-        elseif ah == 0x0C then -- Read Graphics Pixel
-            if self.mode > 3 then
+            return true
+        elseif ah == 0x0D then -- Read Graphics Pixel
+            if self.vmode > 3 then
                 local x = cpu.regs[3]
                 local y = cpu.regs[2]
-                cpu.regs[1] = bor(lshift(ah, 8), self.vram[(0xB8000 - 0x9FFFF) + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 2)])
-            end
-            return false
-        elseif ah == 0x0E then -- Write Character in TTY Mode
-            local cursor_x, cursor_y = get_cursor_pos(cpu)
-            local addr = get_text_addr(cursor_x, cursor_y)
-            local cursor_width = cpu.memory[0x44A]
-            local cursor_height = 25
-            if al == 0x0D then -- CR
-                cursor_x = 0
-            elseif al == 0x0A then -- LF
-                if cursor_y < (cursor_height - 1) then
-                    cursor_y = cursor_y + 1
-                else
-                scroll_up(cpu, 1, 0x07, 0, 0, cursor_height - 1, cursor_width - 1)
-                end
-            elseif al == 0x08 then -- BS
-                if cursor_x > 0 then
-                    cursor_x = cursor_x - 1
-                end
-                cpu.memory[get_text_addr(cursor_x, cursor_y)] = 0
-            elseif al == 0x07 then -- BEll
+                local pixel = 0
 
-            else
-                cpu.memory[addr] = al
-                cursor_x = cursor_x + 1
-                if cursor_x >= cursor_width then
+                if self.vmode == 6 then
+                    pixel = self.vram[(rshift(y, 1) * 80) + (band(y, 1) * 8192) + rshift(x, 3)]
+                else
+                    pixel = self.vram[(rshift(y, 1) * 80) + (band(y, 1) * 8192) + rshift(x, 2)]
+                end
+
+                cpu.regs[1] = bor(lshift(ah, 8), pixel)
+                -- logger:debug("CGA: Interrupt 16h, AH = 0Dh, X = %d, Y = %d, Color = %d", x, y, pixel)
+            end
+            return true
+        elseif ah == 0x0E then -- Write Character in TTY Mode
+            if self.vmode < 4 then
+                local cursor_x, cursor_y = get_cursor_pos(cpu)
+                local addr = get_text_addr(cursor_x, cursor_y)
+                local cursor_width = cpu.memory[0x44A]
+                local cursor_height = 25
+                if al == 0x0D then -- CR
                     cursor_x = 0
+                elseif al == 0x0A then -- LF
                     if cursor_y < (cursor_height - 1) then
                         cursor_y = cursor_y + 1
                     else
-                        scroll_up(cpu, 1, 0x07, 0, 0, cursor_height - 1, cursor_width - 1)
+                    scroll_up(cpu, 1, 0x07, 0, 0, cursor_height - 1, cursor_width - 1)
+                    end
+                elseif al == 0x08 then -- BS
+                    if cursor_x > 0 then
+                        cursor_x = cursor_x - 1
+                    end
+                    cpu.memory[get_text_addr(cursor_x, cursor_y)] = 0
+                elseif al == 0x07 then -- BEll
+
+                else
+                    cpu.memory[addr] = al
+                    cursor_x = cursor_x + 1
+                    if cursor_x >= cursor_width then
+                        cursor_x = 0
+                        if cursor_y < (cursor_height - 1) then
+                            cursor_y = cursor_y + 1
+                        else
+                            scroll_up(cpu, 1, 0x07, 0, 0, cursor_height - 1, cursor_width - 1)
+                        end
                     end
                 end
+                set_cursor_pos(self, cpu, cursor_x, cursor_y)
             end
-            set_cursor_pos(self, cpu, cursor_x, cursor_y)
             return true
         elseif ah == 0x0F then -- Read video mode
-            local ah = cpu.memory[0x44A]
-            local al = self.vmode
-            local bh = cpu.memory[0x462]
-            cpu.regs[1] = bor(lshift(ah, 8), (al))
-            cpu.regs[4] = bor(band(cpu.regs[4], 0xFF), lshift(bh, 8))
+            cpu.regs[1] = bor(lshift(cpu.memory[0x44A], 8), self.vmode)
+            cpu.regs[4] = bor(band(cpu.regs[4], 0xFF), lshift(cpu.memory[0x462], 8))
             return true
         else
             cpu:set_flag(0)
@@ -373,12 +396,12 @@ local function int_10(self)
 end
 
 -- Render
-local function render_text(self, addr, width, height)
+local function render_text(self, width, height)
 	for y = 0, height - 1, 1 do
-		local base = addr + (y * 160)
+		local base = y * 160
 		for x = 0, width - 1, 1 do
-			local chr = cp437[self.vram[base + x * 2] or 0]
-			local atr = self.vram[base + x * 2 + 1] or 0
+			local chr = cp437[self.vram[base + x * 2]]
+			local atr = self.vram[base + x * 2 + 1]
             local bg = rshift(band(atr, 0xFF00), 8)
 			local fg = band(atr, 0x00FF)
             self.display.buffer[y * width + x] = {chr, bg, fg}
@@ -386,24 +409,25 @@ local function render_text(self, addr, width, height)
 	end
 end
 
-local function render_mono(self, addr)
+local function render_mono(self)
 	for y = 0, 199, 1 do
+        local offset_y = (rshift(y, 1) * 80) + (band(y, 1) * 8192)
 		for x = 0, 639, 1 do
-            local pixel = self.vram[addr + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 3)] or 0
+            local pixel = self.vram[offset_y + rshift(x, 3)]
             self.display.buffer[y * 640 + x] = band(rshift(pixel, (7 - band(x, 7))), 1) * 15
 		end
 	end
 end
 
-local function render_color(self, addr)
+local function render_color(self)
     for y = 0, 199, 1 do
         for x = 0, 319, 1 do
-            local pixel = self.vram[addr + (rshift((y / 2), 1) * 80) + (band((y / 2), 1) * 8192) + rshift(x, 2)]
+            local pixel = self.vram[(rshift(y, 1) * 80) + (band(y, 1) * 8192) + rshift(x, 2)]
             local p = band(x, 3)
             if p == 3 then
                 pixel = band(pixel, 3)
             elseif p == 2 then
-                pixel = band(rshift(pixel, 2), 2)
+                pixel = band(rshift(pixel, 2), 3)
             elseif p == 1 then
                 pixel = band(rshift(pixel, 4), 3)
             elseif p == 0 then
@@ -416,14 +440,14 @@ end
 
 local function update(self)
 	if self.vmode == 0 or self.vmode == 1 then
-		render_text(self, 0xB8000 - 0x9FFFF, 40, 25)
+		render_text(self, 40, 25)
 	elseif self.vmode == 2 or self.vmode == 3 then
-		render_text(self, 0xB8000 - 0x9FFFF, 80, 25)
+		render_text(self, 80, 25)
 	elseif self.vmode >= 4 and self.vmode <= 6 then
 		if self.vmode < 6 then
-			render_color(self, 0xB8000 - 0x9FFFF)
+			render_color(self)
 		else
-			render_mono(self, 0xB8000 - 0x9FFFF)
+			render_mono(self)
 		end
 	end
     self.display.update()
@@ -458,12 +482,12 @@ function videocard.new(cpu, display)
         textmode = true,
         start_addr = 0xB8000,
         end_addr = 0xBFFFF,
-        -- Font
+        -- Screen
         font = font_8_8,
         glyph_width = 8,
         glyph_height = 8,
         color_palette = {
-            {0, 0, 0, 255}, -- black
+            [0] = {0, 0, 0, 255}, -- black
             {0, 0, 170, 255}, -- blue
             {0, 170, 0, 255}, -- green
             {0, 170, 170, 255}, -- cyan
@@ -479,14 +503,16 @@ function videocard.new(cpu, display)
             {255, 85, 255, 255}, -- light magenta
             {255, 255, 85, 255}, -- yellow
             {255, 255, 255, 255} -- white
-        }
+        },
+        cursor_color = {255, 255, 255, 255}
     }
     setmetatable(self.color_palette, {
         __index = function (t, k)
             if rawget(t, k) then
                 return rawget(t, k)
             end
-            return {0, 255, 255, 255}
+            -- logger:debug("CGA: Unknown palette index %d", k)
+            return {255, 255, 255, 255}
         end
     })
 

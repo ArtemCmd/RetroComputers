@@ -3,12 +3,17 @@ local logger = require("retro_computers:logger")
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local blocks = require("retro_computers:blocks")
 local config = require("retro_computers:config")
+local libpng = nil
 
+local is_initilized = false
 -- Screen
 local screen_width = 0
 local screen_height = 0
 local screen = document.screen
 local cursor = document.cursor
+
+local screen_graphics = {}
+local clock = os.clock()
 -- Machine
 local mx, my, mz
 local machine = nil
@@ -76,22 +81,37 @@ local function refresh()
                     local index = y * width + x
                     -- local bg_index = width * height + index
                     document[index + 1].src =  machine.components.videocard.font[cell[1]]
-                    document[index + 1].color = machine.components.videocard.color_palette[cell[3] + 1]
+                    document[index + 1].color = machine.components.videocard.color_palette[cell[3]]
                     -- document[bg_index + 1].color = machine.components.videocard.color_palette[cell[2] + 1]
                 end
             end
             cursor.pos = {cursor_x, cursor_y}
             cursor.visible = not cursor.visible
         else
-            local str = {}
-            for y = 0, height - 1, 1 do
-                for x = 0, width - 1, 1 do
-                    local pixel = palette[machine.components.display.buffer[y * width + x] or 0]
-                    str[y * width + x] = pixel
+            if libpng then
+                if os.clock() - clock >= 0.1  then
+                    for y = 0, height - 1, 1 do
+                        for x = 0, width - 1, 1 do
+                            local pixel = machine.components.videocard.color_palette[machine.components.display.buffer[y * width + x]]
+                            screen_graphics:set(x, y, pixel[1], pixel[2], pixel[3], pixel[4])
+                        end
+                    end
+
+                    screen_graphics:load("gui/screen")
+                    clock = os.clock()
+                    -- logger:debug("Screen: Render graphics mode")
                 end
-                str[y * width + width - 1] = '\n'
+            else
+                local str = {}
+                for y = 0, height - 1, 1 do
+                    for x = 0, width - 1, 1 do
+                        local pixel = palette[machine.components.display.buffer[y * width + x]]
+                        str[y * width + x] = pixel
+                    end
+                    str[y * width + width - 1] = '\n'
+                end
+                print(table.concat(str))
             end
-            print(table.concat(str))
         end
     end
 end
@@ -100,27 +120,33 @@ local function set_resolution(width, height, graphics_mode)
     if (screen_width == width) and (screen_height == height) then
         return
     end
-
+    logger:debug("Screen: Set resolution to Width = %d Height = %d, Graphics Mode = %s", width, height, graphics_mode)
     screen_width = width
     screen_height = height
 
     if graphics_mode then
         local viewport = gui.get_viewport()
         document.root.size = viewport
+        screen:clear()
         screen.size = {width, height}
-        screen.wpos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
-    else
-        -- Apply scale
-        glyph_width = glyph_width * config.font_scale
-        glyph_height = glyph_height * config.font_scale
+        screen.pos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
+        screen.visible = false
 
+        document.screen_graphics.size = {screen.size[1], screen.size[2]}
+        document.screen_graphics.pos = {screen.pos[1], screen.pos[2]}
+        document.screen_graphics.visible = true
+
+        cursor.visible = false
+    else
         local viewport = gui.get_viewport()
         document.root.size = viewport
 
-        -- Screen
+        -- -- Screen
+        document.screen_graphics.visible = false
+        screen.visible = true
         screen:clear()
         screen.size = {width * glyph_width, height * glyph_height + 4}
-        screen.wpos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
+        screen.pos = {viewport[1] / 2 - screen.size[1] / 2, viewport[2] / 2 - screen.size[2] / 2}
 
         -- local pixels = x * y
         for i = 0, height - 1, 1 do
@@ -139,9 +165,17 @@ local function set_resolution(width, height, graphics_mode)
 end
 
 function on_open()
+    if not is_initilized then
+        is_initilized = true
+        if pack.is_installed("libpng") then
+            libpng = require("libpng:image")
+            screen_graphics = libpng:new(640, 200)
+        end
+    end
     machine = vmmanager.get_current_machine()
     if machine then
         machine.components.display.update = refresh
+        machine.components.display.set_resolution = set_resolution
         machine.is_focused = true
         local block = blocks.get_current_block()
         if block then
@@ -149,11 +183,12 @@ function on_open()
             my = block.pos[2]
             mz = block.pos[3]
         end
-        glyph_width = machine.components.videocard.glyph_width
-        glyph_height = machine.components.videocard.glyph_height
-        set_resolution(machine.components.display.width, machine.components.display.height)
+        glyph_width = machine.components.videocard.glyph_width * config.font_scale
+        glyph_height = machine.components.videocard.glyph_height * config.font_scale
+        cursor.color = machine.components.videocard.cursor_color
+        set_resolution(machine.components.display.width, machine.components.display.height, not machine.components.videocard.textmode)
     else
-        logger:error("Machine not found!")
+        logger:error("Screen: Machine not found!")
     end
 end
 
@@ -161,6 +196,7 @@ function on_close()
     hud.close("retro_computers:keyboard")
     if machine then
         machine.components.display.update = function() end
+        machine.components.display.set_resolution = function() end
         machine.is_focused = false
         machine = nil
         glyph_height = 0

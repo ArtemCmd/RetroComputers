@@ -26,9 +26,9 @@ function RAM.new(machine)
             elseif (key >= machine.components.videocard.start_addr) and (key <= machine.components.videocard.end_addr) then
                 return machine.components.videocard:vram_read(key)
             elseif (key >= 0xF0000 and key < 0x100000) then
-                return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0xFF
+                return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0x00
             else
-                return 0xFF
+                return 0x00
             end
         end,
         __newindex = function(t, key, value)
@@ -84,9 +84,9 @@ local printer = require("retro_computers:emulator/printer")
 local lpt = require("retro_computers:emulator/hardware/lpt")
 local display = require("retro_computers:emulator/display")
 
-local  function port_80(cpu, port, val) -- Debug port
+local  function port_80(cpu, port, val) -- POST port
     if val then
-        -- logger:debug("IBM XT: Debug port: %02X", val)
+        logger:debug("IBM XT: Debug port: %02X", val)
     else
         return 0xff
     end
@@ -103,7 +103,7 @@ local function int_12(cpu)
 	return true
 end
 
-local function int_15(cpu, ax,ah,al)
+local function int_15(cpu, ax, ah, al)
     -- logger:warning("Unknown interrupt: 15h %02X", ah)
     cpu.regs[1] = bor(0x8600, band(cpu.regs[1], 0xFF))
     cpu:set_flag(0)
@@ -132,16 +132,16 @@ local function start(self)
         logger:info("IBM XT: Starting")
         self:reset()
         -- BIOS TEST
-        -- bios-xt.bin 0xFC000
-        -- local rom = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/1501512.u18")
-        -- local rom2 = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/5000027.u19")
+        -- -- bios-xt.bin 0xFC000
+        -- local rom = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/bios-book8088.bin")
+        -- -- local rom2 = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/5000027.u19")
         -- for i = 0, #rom - 1, 1 do
-        --     self.components.cpu.memory[0xF8000 + i] = rom[i + 1]
+        --     self.components.cpu.memory[0xFC000 + i] = rom[i + 1]
         -- end
-        -- for i = 0, #rom - 1, 1 do
-        --     self.components.cpu.memory[0xF0000 + i] = rom2[i + 1]
-        -- end
-        -- self.components.cpu:set_ip(0xFFFF, 0)
+        -- -- for i = 0, #rom - 1, 1 do
+        -- --     self.components.cpu.memory[0xF0000 + i] = rom2[i + 1]
+        -- -- end
+        -- -- self.components.cpu:set_ip(0xFFFF, 0)
 
         self.components.cpu.flags = 0x0202
         -- BDA 
@@ -150,14 +150,25 @@ local function start(self)
         self.components.cpu.memory:w16(0x413, 640) -- Memory size
         self.components.cpu.memory[0x400] = 0xFF
         self.components.cpu.memory[0x408] = 0xFF
-
         self.components.cpu:register_interrupt_handler(0x11, int_11)
         self.components.cpu:register_interrupt_handler(0x12, int_12)
         self.components.cpu:register_interrupt_handler(0x15, int_15)
         self.components.cpu.memory[0xFFFFE] = 0xFE
         self.components.videocard:set_mode(self.components.cpu, 3, true)
-
         self.components.cpu:port_set(0x80, port_80)
+
+        for i = 0, 255, 1 do
+            if self.components.cpu.interrupt_handlers[i + 1] then
+                self.components.cpu.memory[0xF1100+i] = 0x90
+            else
+                self.components.cpu.memory[0xF1100+i] = 0xCF
+            end
+        end
+
+        for i = 0, 255, 1 do
+            self.components.cpu.memory:w16(i * 4, 0x1100 + i)
+            self.components.cpu.memory:w16(i * 4 + 2, 0xF000)
+        end
 
         local hdd_path = get_machine_path(self.id) .. "disks/hdd.hdf"
         if not file.exists(hdd_path) then
@@ -192,16 +203,14 @@ local function step(self)
 end
 
 local function handle_ibm(self)
-    if self.execute == true then
-        self.execute = self.components.cpu:run_one(false, true)
-        if self.execute == -1 then
-            step(self)
-            self.execute = true
-        elseif (band(self.opcode, 0x1FF) == 0) and (os.clock() - self.clock) >= 0.05 then
-            step(self)
-        end
-        self.opcode = self.opcode + 1
+    self.execute = self.components.cpu:run_one(false)
+    if (self.execute == -1) and (os.clock() - self.clock) >= 0.05 then
+        self.execute = true
+        step(self)
+    elseif (band(self.opcode, 0x1FF) == 0) and (os.clock() - self.clock) >= 0.05 then
+        step(self)
     end
+    self.opcode = self.opcode + 1
 end
 
 local function update(self)

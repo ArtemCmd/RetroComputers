@@ -305,8 +305,8 @@ function mda.new(cpu, display)
         cursor_x = 0,
         cursor_y = 0,
         color_palette = {{0, 255, 0, 255}},
-        glyph_width = 9,
-        glyph_height = 14,
+        glyph_width = 8,
+        glyph_height = 8,
         textmode = true,
         font = font_9_14
     }

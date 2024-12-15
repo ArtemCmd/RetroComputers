@@ -168,12 +168,12 @@ local function channel_update(self, channel_num)
     end
 
     -- if channel_num == 0 then
-    --     -- self.cpu:emit_interrupt(0x08, false)
+    --     self.cpu:emit_interrupt(0x08, false)
     -- end
 end
 
 local function pit_tick(self)
-    for x = 1, 300, 1 do
+    for _ = 1, 300, 1 do
         for i = 0, 2, 1 do
             local channel = self.channels[i]
             if channel.latch then
@@ -208,7 +208,9 @@ local function port_init(self, channel)
                 end
             end
             ch.latch = true
+            -- logger:debug("i8253: Channel %d: Write: Access mode = %d, Reload = %d", channel, ch.read_mode, ch.reload)
         else -- Read
+            -- logger:debug("i8253: Channel %d: Read: Access mode = %d, Latched Counter = %d", channel, ch.read_mode, ch.lcounter)
             if ch.latched > 0 then
                 local ret = 0xFF
                 if band(ch.read_mode, 0x80) > 0 then
@@ -290,7 +292,7 @@ local function port_43(self)
                     if channel.latched > 0 then
                         channel.lcounter = channel.lcounter - 1
                     end
-                    logger:debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s", channel_num, channel.read_mode, channel.mode, channel.bsd)
+                    -- logger:debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s", channel_num, channel.read_mode, channel.mode, channel.bsd)
                 end
             end
         else

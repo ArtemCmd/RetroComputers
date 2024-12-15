@@ -55,7 +55,19 @@ end
 
 function manager.load_floppys()
     logger:info("DriveManager: Loading floppy disks...")
-    searcher_paths = config.floppy_paths
+    if config.auto_search_floppys then
+        local packs = pack.get_installed()
+
+        for _, content in pairs(packs) do
+            local path = content .. ":disks"
+            if file.exists(path) then
+                searcher_paths[#searcher_paths+1] = path
+            end
+        end
+    else
+        searcher_paths = config.floppy_paths
+    end
+
     for _, path in pairs(searcher_paths) do
         if file.exists(path) then
             local dirs = file.list(path)
