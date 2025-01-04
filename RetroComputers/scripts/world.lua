@@ -1,10 +1,10 @@
 local logger = require("retro_computers:logger")
 local config = require("retro_computers:config")
 local vmmanager = require("retro_computers:emulator/vmmanager")
-local ibm_xt =  require("retro_computers:emulator/machine/ibm_xt")
 local blocks = require("retro_computers:blocks")
 local drive_manager = require("retro_computers:emulator/drive_manager")
 local input_manager = require("retro_computers:emulator/input_manager")
+local ibm_xt =  require("retro_computers:emulator/machine/ibm_xt")
 
 function on_world_open()
     if not file.exists("world:") then
@@ -28,6 +28,7 @@ function on_world_open()
     drive_manager.load_floppys()
 
     local machine = ibm_xt.new(vmmanager.get_next_id())
+    vmmanager.load_machine_state(machine)
     vmmanager.registry(machine)
 
     -- Checking update

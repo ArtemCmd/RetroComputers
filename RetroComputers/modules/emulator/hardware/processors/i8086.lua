@@ -1,37 +1,151 @@
 -- TODO: Rewrite
--- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa govnokod
 local logger = require("retro_computers:logger")
+local bit_converter = require("core:bit_converter")
 
 local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
--- local io_ports = {}
 local run_one = function (self, a, b) end
+
+local rm_seg_table = {
+    3, 3,
+    2, 2,
+    3, 3,
+    2, 3
+}
+
+local parity_table = {
+    [0] = 4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0,
+    0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4,
+    0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4,
+    4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0,
+    0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4,
+    4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0,
+    4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0,
+    0, 4, 4, 0, 4, 0, 0, 4, 4, 0, 0, 4, 0, 4, 4, 0, 4, 0, 0, 4, 0, 4, 4, 0, 0, 4, 4, 0, 4, 0, 0, 4
+}
+
+local cpu_rm_addr = {
+    function(self, data) return band((self.regs[4] + self.regs[7] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[4] + self.regs[8] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[6] + self.regs[7] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[6] + self.regs[8] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[7] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[8] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[6] + data.disp), 0xFFFF) end,
+    function(self, data) return band((self.regs[4] + data.disp), 0xFFFF) end
+}
+
+local read_rm_table = {
+    [0] = function(self, data) return self.regs[1] end,
+    [1] = function(self, data) return self.regs[2] end,
+    [2] = function(self, data) return self.regs[3] end,
+    [3] = function(self, data) return self.regs[4] end,
+    [4] = function(self, data) return self.regs[5] end,
+    [5] = function(self, data) return self.regs[6] end,
+    [6] = function(self, data) return self.regs[7] end,
+    [7] = function(self, data) return self.regs[8] end,
+    [8] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[1](self, data)) end,
+    [9] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[2](self, data)) end,
+    [10] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[3](self, data)) end,
+    [11] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[4](self, data)) end,
+    [12] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[5](self, data)) end,
+    [13] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[6](self, data)) end,
+    [14] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[7](self, data)) end,
+    [15] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[8](self, data)) end,
+    [16] = function(self, data) return band(self.regs[1], 0xFF) end,
+    [17] = function(self, data) return band(self.regs[2], 0xFF) end,
+    [18] = function(self, data) return band(self.regs[3], 0xFF) end,
+    [19] = function(self, data) return band(self.regs[4], 0xFF) end,
+    [20] = function(self, data) return rshift(self.regs[1], 8) end,
+    [21] = function(self, data) return rshift(self.regs[2], 8) end,
+    [22] = function(self, data) return rshift(self.regs[3], 8) end,
+    [23] = function(self, data) return rshift(self.regs[4], 8) end,
+    [24] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + data.disp] end,
+    [25] = function(self, data) return self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + data.disp) end,
+    [26] = function(self, data) return self.segments[1] end,
+    [27] = function(self, data) return self.segments[2] end,
+    [28] = function(self, data) return self.segments[3] end,
+    [29] = function(self, data) return self.segments[4] end,
+    [30] = function(self, data) return self.segments[5] end,
+    [31] = function(self, data) return self.segments[6] end,
+    [32] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[1](self, data)] end,
+    [33] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[2](self, data)] end,
+    [34] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[3](self, data)] end,
+    [35] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[4](self, data)] end,
+    [36] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[5](self, data)] end,
+    [37] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[6](self, data)] end,
+    [38] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[7](self, data)] end,
+    [39] = function(self, data) return self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[8](self, data)] end,
+    [40] = function(self, data) return band(data.imm, 0xFF) end,
+    [41] = function(self, data) return data.imm end
+}
+
+local write_rm_table = {
+    [0] = function(self, data, val) self.regs[1] = val end,
+    [1] = function(self, data, val) self.regs[2] = val end,
+    [2] = function(self, data, val) self.regs[3] = val end,
+    [3] = function(self, data, val) self.regs[4] = val end,
+    [4] = function(self, data, val) self.regs[5] = val end,
+    [5] = function(self, data, val) self.regs[6] = val end,
+    [6] = function(self, data, val) self.regs[7] = val end,
+    [7] = function(self, data, val) self.regs[8] = val end,
+    [8] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 4)], 4) + cpu_rm_addr[1](self, data), val) end,
+    [9] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 4)], 4) + cpu_rm_addr[2](self, data), val) end,
+    [10] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 3)], 4) + cpu_rm_addr[3](self, data), val) end,
+    [11] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 3)], 4) + cpu_rm_addr[4](self, data), val) end,
+    [12] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 4)], 4) + cpu_rm_addr[5](self, data), val) end,
+    [13] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 4)], 4) + cpu_rm_addr[6](self, data), val) end,
+    [14] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 3)], 4) + cpu_rm_addr[7](self, data), val) end,
+    [15] = function(self, data, val) self.memory:w16(lshift(self.segments[(self.segment_mode or 4)], 4) + cpu_rm_addr[8](self, data), val) end,
+    [16] = function(self, data, val) self.regs[1] = bor(band(self.regs[1], 0xFF00), band(val, 0xFF)) end,
+    [17] = function(self, data, val) self.regs[2] = bor(band(self.regs[2], 0xFF00), band(val, 0xFF)) end,
+    [18] = function(self, data, val) self.regs[3] = bor(band(self.regs[3], 0xFF00), band(val, 0xFF)) end,
+    [19] = function(self, data, val) self.regs[4] = bor(band(self.regs[4], 0xFF00), band(val, 0xFF)) end,
+    [20] = function(self, data, val) self.regs[1] = bor(band(self.regs[1], 0xFF), lshift(band(val, 0xFF), 8)) end,
+    [21] = function(self, data, val) self.regs[2] = bor(band(self.regs[2], 0xFF), lshift(band(val, 0xFF), 8)) end,
+    [22] = function(self, data, val) self.regs[3] = bor(band(self.regs[3], 0xFF), lshift(band(val, 0xFF), 8)) end,
+    [23] = function(self, data, val) self.regs[4] = bor(band(self.regs[4], 0xFF), lshift(band(val, 0xFF), 8)) end,
+    [24] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + data.disp] = band(val, 0xFF) end,
+    [25] = function(self, data, val) self.memory:w16((lshift(self.segments[self.segment_mode or 4], 4) + data.disp), val) end,
+    [26] = function(self, data, val) self.segments[1] = val end,
+    [27] = function(self, data, val) self.segments[2] = val end,
+    [28] = function(self, data, val) self.segments[3] = val end,
+    [29] = function(self, data, val) self.segments[4] = val end,
+    [30] = function(self, data, val) self.segments[5] = val end,
+    [31] = function(self, data, val) self.segments[6] = val end,
+    [32] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[1](self, data)] = band(val, 0xFF) end,
+    [33] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[2](self, data)] = band(val, 0xFF) end,
+    [34] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[3](self, data)] = band(val, 0xFF) end,
+    [35] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[4](self, data)] = band(val, 0xFF) end,
+    [36] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[5](self, data)] = band(val, 0xFF) end,
+    [37] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[6](self, data)] = band(val, 0xFF) end,
+    [38] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 3], 4) + cpu_rm_addr[7](self, data)] = band(val, 0xFF) end,
+    [39] = function(self, data, val) self.memory[lshift(self.segments[self.segment_mode or 4], 4) + cpu_rm_addr[8](self, data)] = band(val, 0xFF) end
+}
 
 local function emit_interrupt(self, v, nmi)
     nmi = (v == 2)
+
     if nmi then
         table.insert(self.intqueue, v + 256)
     else
         table.insert(self.intqueue, v)
     end
+
     self.hasint = true
 end
 
 local function seg(self, s, v)
-    return lshift(self.segments[s+1], 4) + v
-end
-
-local function segmd(self, s, v)
-    return lshift(self.segments[(self.segment_mode or (s+1))], 4) + v
+    return lshift(self.segments[s + 1], 4) + v
 end
 
 local function advance_ip(self)
-    local ip = (lshift(self.segments[(self.seg_cs)+1], 4)+(self.ip))
+    local ip = (lshift(self.segments[2], 4) + self.ip)
     self.ip = band(self.ip + 1, 0xFFFF)
     return self.memory[ip]
 end
 
 local function advance_ip16(self)
-    local ip = (lshift(self.segments[(self.seg_cs)+1], 4)+(self.ip))
+    local ip = (lshift(self.segments[2], 4) + self.ip)
     self.ip = band(self.ip + 2, 0xFFFF)
     return self.memory:r16(ip)
 end
@@ -60,10 +174,6 @@ local function to_32(value)
     end
 end
 
-local function cpu_flag(self, t)
-    return band(self.flags, lshift(1, t)) ~= 0
-end
-
 local function cpu_clear_flag(self, t)
     self.flags = band(self.flags, bnot(lshift(1, t)))
 end
@@ -72,16 +182,12 @@ local function cpu_set_flag(self, t)
     self.flags = bor(self.flags, lshift(1, t))
 end
 
-local function cpu_write_flag(self, t, v)
-    if v then
-        cpu_set_flag(self, t)
+local function cpu_write_flag(self, num, val)
+    if val then
+        cpu_set_flag(self, num)
     else
-        cpu_clear_flag(self, t)
+        cpu_clear_flag(self, num)
     end
-end
-
-local function cpu_complement_flag(self, t)
-    self.flags = bxor(self.flags, lshift(1, t))
 end
 
 local function cpu_incdec_dir(self, t, amount)
@@ -93,143 +199,72 @@ local function cpu_incdec_dir(self, t, amount)
 end
 
 local function cpu_set_ip(self, cs, ip)
-    self.segments[2] = cs
-    self.ip = ip
+    self.segments[2] = band(cs, 0xFFFF)
+    self.ip = band(ip, 0xFFFF)
 end
 
-local cpu_rm_addr = {
-    function(self, data) return band((self.regs[4] + self.regs[7] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[4] + self.regs[8] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[6] + self.regs[7] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[6] + self.regs[8] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[7] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[8] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[6] + data.disp), 0xFFFF) end,
-    function(self, data) return band((self.regs[4] + data.disp), 0xFFFF) end
-}
-
 local function cpu_seg_rm(self, data, v)
-    if v >= 8 and v < 16 then
-        return self.rm_seg_t[(v - 7)]
-    elseif v >= 32 and v < 40 then
-        return self.rm_seg_t[(v - 31)]
+    if (v >= 8) and (v < 16) then
+        return rm_seg_table[v - 7]
+    elseif (v >= 32) and (v < 40) then
+        return rm_seg_table[v - 31]
     else
-        return self.seg_ds
+        return 3
     end
 end
 
 local function cpu_addr_rm(self, data, v)
-    if v >= 8 and v < 16 then
-        return cpu_rm_addr[(v - 7)](self, data)
-    elseif v >= 24 and v <= 25 then
+    if (v >= 8) and (v < 16) then
+        return cpu_rm_addr[v - 7](self, data)
+    elseif (v >= 24) and (v <= 25) then
         return data.disp
-    elseif v >= 32 and v < 40 then
-        return cpu_rm_addr[(v - 31)](self, data)
+    elseif (v >= 32) and (v < 40) then
+        return cpu_rm_addr[v - 31](self, data)
     else
         return 0xFF
     end
 end
 
-local readrm_table = {}
-readrm_table[0] = function(self, data, v) return self.regs[1] end
-readrm_table[1] = function(self, data, v) return self.regs[2] end
-readrm_table[2] = function(self, data, v) return self.regs[3] end
-readrm_table[3] = function(self, data, v) return self.regs[4] end
-readrm_table[4] = function(self, data, v) return self.regs[5] end
-readrm_table[5] = function(self, data, v) return self.regs[6] end
-readrm_table[6] = function(self, data, v) return self.regs[7] end
-readrm_table[7] = function(self, data, v) return self.regs[8] end
-for i=8,15 do readrm_table[i] = function(self, data, v)
-    return self.memory:r16((lshift(self.segments[(self.segment_mode or (self.rm_seg_t[(v - 7)]+1))], 4) + (cpu_rm_addr[(v - 7)](self, (data)))))
-end end
-readrm_table[16] = function(self, data, v) return band(self.regs[1], 0xFF) end
-readrm_table[17] = function(self, data, v) return band(self.regs[2], 0xFF) end
-readrm_table[18] = function(self, data, v) return band(self.regs[3], 0xFF) end
-readrm_table[19] = function(self, data, v) return band(self.regs[4], 0xFF) end
-readrm_table[20] = function(self, data, v) return rshift(self.regs[1], 8) end
-readrm_table[21] = function(self, data, v) return rshift(self.regs[2], 8) end
-readrm_table[22] = function(self, data, v) return rshift(self.regs[3], 8) end
-readrm_table[23] = function(self, data, v) return rshift(self.regs[4], 8) end
-readrm_table[24] = function(self, data, v) return self.memory[(lshift(self.segments[(self.segment_mode or (4))], 4) + (data.disp))] end
-readrm_table[25] = function(self, data, v) return self.memory:r16((lshift(self.segments[(self.segment_mode or (4))], 4) + (data.disp))) end
-for i=26,31 do readrm_table[i] = function(self, data, v)
-    return self.segments[v - 25]
-end end
-for i=32,39 do readrm_table[i] = function(self, data, v)
-    return self.memory[(lshift(self.segments[(self.segment_mode or (self.rm_seg_t[(v - 31)]+1))], 4) + (cpu_rm_addr[(v - 31)](self, (data))))]
-end end
-readrm_table[40] = function(self, data, v) return band(data.imm, 0xFF) end
-readrm_table[41] = function(self, data, v) return data.imm end
-
 local function cpu_read_rm(self, data, v)
-    return readrm_table[v](self, data, v)
+    return read_rm_table[v](self, data)
 end
 
-local writerm_table = {}
-writerm_table[0] = function(self, data, v, val) self.regs[1] = val end
-writerm_table[1] = function(self, data, v, val) self.regs[2] = val end
-writerm_table[2] = function(self, data, v, val) self.regs[3] = val end
-writerm_table[3] = function(self, data, v, val) self.regs[4] = val end
-writerm_table[4] = function(self, data, v, val) self.regs[5] = val end
-writerm_table[5] = function(self, data, v, val) self.regs[6] = val end
-writerm_table[6] = function(self, data, v, val) self.regs[7] = val end
-writerm_table[7] = function(self, data, v, val) self.regs[8] = val end
-for i=8,15 do writerm_table[i] = function(self, data, v, val)
- self.memory:w16((lshift(self.segments[(self.segment_mode or (self.rm_seg_t[(v - 7)]+1))], 4) + (cpu_rm_addr[(v - 7)](self, (data)))), val)
-end end
-writerm_table[16] = function(self, data, v, val) self.regs[1] = bor(band(self.regs[1], 0xFF00), band(val, 0xFF)) end
-writerm_table[17] = function(self, data, v, val) self.regs[2] = bor(band(self.regs[2], 0xFF00), band(val, 0xFF)) end
-writerm_table[18] = function(self, data, v, val) self.regs[3] = bor(band(self.regs[3], 0xFF00), band(val, 0xFF)) end
-writerm_table[19] = function(self, data, v, val) self.regs[4] = bor(band(self.regs[4], 0xFF00), band(val, 0xFF)) end
-writerm_table[20] = function(self, data, v, val) self.regs[1] = bor(band(self.regs[1], 0xFF), lshift(band(val, 0xFF), 8)) end
-writerm_table[21] = function(self, data, v, val) self.regs[2] = bor(band(self.regs[2], 0xFF), lshift(band(val, 0xFF), 8)) end
-writerm_table[22] = function(self, data, v, val) self.regs[3] = bor(band(self.regs[3], 0xFF), lshift(band(val, 0xFF), 8)) end
-writerm_table[23] = function(self, data, v, val) self.regs[4] = bor(band(self.regs[4], 0xFF), lshift(band(val, 0xFF), 8)) end
-writerm_table[24] = function(self, data, v, val)
- self.memory[(lshift(self.segments[(self.segment_mode or (4))], 4) + (data.disp))] = band(val, 0xFF)
-end
-writerm_table[25] = function(self, data, v, val)
-    self.memory:w16((lshift(self.segments[(self.segment_mode or (4))], 4) + (data.disp)), val)
-end
-for i=26,31 do writerm_table[i] = function(self, data, v, val)
-    self.segments[v - 25] = val
-end end
-for i=32,39 do writerm_table[i] = function(self, data, v, val)
-    self.memory[(lshift(self.segments[(self.segment_mode or (self.rm_seg_t[(v - 31)]+1))], 4) + (cpu_rm_addr[(v - 31)](self, (data))))] = band(val, 0xFF)
-end end
 local function cpu_write_rm(self, data, v, val)
-    writerm_table[v](self, data, v, val)
+    write_rm_table[v](self, data, val)
 end
 
 local mrm_table = {}
-for i=0,2047 do
+for i = 0, 2047, 1 do
     local is_seg = band(i, 1024) ~= 0
     local mod = band(rshift(i, 6), 0x03)
     local reg = band(rshift(i, 3), 0x07)
     local rm = band(i, 0x07)
     local d = band(rshift(i, 9), 0x01)
-    local w = band(rshift(i, 8), 0x01)
-    if is_seg then w = 1 end
+    local variant = band(rshift(i, 8), 0x01)
+
+    if is_seg then
+        variant = 1
+    end
 
     local op1 = reg
     local op2 = rm
 
     if is_seg then
         op1 = (op1 % 6) + 26
-    elseif w == 0 then
+    elseif variant == 0 then
         op1 = op1 + 16
     end
 
     if mod == 0 and rm == 6 then
-        op2 = 24 + w
+        op2 = 24 + variant
     elseif mod ~= 3 then
-        if w == 0 then
+        if variant == 0 then
             op2 = op2 + 32
         else
             op2 = op2 + 8
         end
     else
-        if w == 0 then
+        if variant == 0 then
             op2 = op2 + 16
         end
     end
@@ -251,11 +286,12 @@ for i=0,2047 do
     elseif mod == 0 and rm == 6 then
         cdisp = 3
     end
-    mrm_table[i] = {src=src, dst=dst, cdisp=cdisp, disp=0}
+
+    mrm_table[i] = {src = src, dst = dst, cdisp = cdisp, disp = 0}
 end
 
 local function cpu_mod_rm(self, opcode, is_seg)
-    local modrm = bor(bor(advance_ip(self), lshift(band(opcode, 3), 8)), (is_seg or 0))
+    local modrm = bor(bor(advance_ip(self), lshift(band(opcode, 3), 8)), is_seg or 0)
     local data = mrm_table[modrm]
 
     if data.cdisp == 0 then
@@ -272,176 +308,159 @@ local function cpu_mod_rm(self, opcode, is_seg)
 end
 
 local function cpu_mrm_copy(data)
-    return {src=data.src,dst=data.dst,disp=data.disp}
+    return {src = data.src, dst = data.dst, disp = data.disp}
 end
 
-local mrm6_4 = {src=40,dst=16,imm=0}
-local mrm6_5 = {src=41,dst=0,imm=0}
+local mrm6_4 = {src = 40, dst = 16, imm = 0}
+local mrm6_5 = {src = 41, dst = 0, imm = 0}
 
 local mrm6_table = {
-    [0]=cpu_mod_rm,
-    [1]=cpu_mod_rm,
-    [2]=cpu_mod_rm,
-    [3]=cpu_mod_rm,
-    [4]=function(self, v)
-    mrm6_4.imm=advance_ip(self)
+    [0] = cpu_mod_rm,
+    [1] = cpu_mod_rm,
+    [2] = cpu_mod_rm,
+    [3] = cpu_mod_rm,
+    [4] = function(self, v)
+        mrm6_4.imm = advance_ip(self)
         return mrm6_4
     end,
-    [5]=function(self, v)
-    mrm6_5.imm=advance_ip16(self)
+    [5] = function(self, v)
+        mrm6_5.imm = advance_ip16(self)
         return mrm6_5
     end,
-    [6]=cpu_mod_rm,
-    [7]=cpu_mod_rm
+    [6] = cpu_mod_rm,
+    [7] = cpu_mod_rm
 }
 
-local function cpu_mod_rm6(opcode)
-    local v = band(opcode, 0x07)
-    return mrm6_table[v](v)
-end
-
-local parity_table = {}
-for i = 0,255 do
-    local p = 0
-    local v = i
-    while v ~= 0 do
-        p = p + band(v, 1)
-        v = rshift(v, 1)
-    end
-    if band(p, 1) == 0 then
-        parity_table[i] = 4
-    else
-        parity_table[i] = 0
-    end
-end
-
-local function cpu_write_parity(self, v)
-    self.flags = band(self.flags, bor(0xFFFB, parity_table[band(v, 0xFF)]))
-end
-
-local function cpu_push16(self, value)
+local function cpu_push16(self, val)
     self.regs[5] = band(self.regs[5] - 2, 0xFFFF)
-    self.memory:w16((lshift(self.segments[(self.seg_ss)+1], 4)+(self.regs[5])), band(value, 0xFFFF))
+    self.memory:w16((lshift(self.segments[3], 4) + self.regs[5]), band(val, 0xFFFF))
 end
 
 local function cpu_pop16(self)
-    local sp = self.regs[5]
-    self.regs[5] = band(sp + 2, 0xFFFF)
-    return self.memory:r16((lshift(self.segments[(self.seg_ss)+1], 4)+(sp)))
+    local old_sp = self.regs[5]
+    self.regs[5] = band(old_sp + 2, 0xFFFF)
+    return self.memory:r16(lshift(self.segments[3], 4) + old_sp)
 end
 
 local function cpu_mov(self, mrm)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    cpu_write_rm(self, mrm, mrm.dst, v1)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    cpu_write_rm(self, mrm, mrm.dst, val1)
 end
 
-local function cpu_zsp(self, vr, opc)
+local function cpu_zsp(self, result, opc)
     if band(opc, 0x01) == 1 then
-        cpu_write_flag(self, 6, band(vr, 0xFFFF) == 0)
-        cpu_write_flag(self, 7, band(vr, 0x8000) ~= 0)
-        self.flags = bor(band(self.flags, 0xFFFB), parity_table[band(vr, 0xFF)])
+        cpu_write_flag(self, 6, band(result, 0xFFFF) == 0)
+        cpu_write_flag(self, 7, band(result, 0x8000) ~= 0)
+        self.flags = bor(band(self.flags, 0xFFFB), parity_table[band(result, 0xFF)])
     else
-        cpu_write_flag(self, 6, band(vr, 0xFF) == 0)
-        cpu_write_flag(self, 7, band(vr, 0x80) ~= 0)
-        self.flags = bor(band(self.flags, 0xFFFB), parity_table[band(vr, 0xFF)])
+        cpu_write_flag(self, 6, band(result, 0xFF) == 0)
+        cpu_write_flag(self, 7, band(result, 0x80) ~= 0)
+        self.flags = bor(band(self.flags, 0xFFFB), parity_table[band(result, 0xFF)])
     end
 end
 
-local function cpu_inc(self, vr, opc)
-    cpu_zsp(self, vr, opc)
-    cpu_write_flag(self, 4, band(vr, 0xF) == 0x0)
+local function cpu_inc(self, result, opc)
+    cpu_zsp(self, result, opc)
+    cpu_write_flag(self, 4, band(result, 0xF) == 0x0)
     if band(opc, 0x01) == 1 then
-        cpu_write_flag(self, 11, vr == 0x8000)
+        cpu_write_flag(self, 11, result == 0x8000)
     else
-        cpu_write_flag(self, 11, vr == 0x80)
+        cpu_write_flag(self, 11, result == 0x80)
     end
 end
 
-local function cpu_dec(self, vr, opc)
-    cpu_zsp(self, vr, opc)
-    cpu_write_flag(self, 4, band(vr, 0xF) == 0xF)
+local function cpu_dec(self, result, opc)
+    cpu_zsp(self, result, opc)
+    cpu_write_flag(self, 4, band(result, 0xF) == 0xF)
     if band(opc, 0x01) == 1 then
-        cpu_write_flag(self, 11, vr == 0x7FFF)
+        cpu_write_flag(self, 11, result == 0x7FFF)
     else
-        cpu_write_flag(self, 11, vr == 0x7F)
+        cpu_write_flag(self, 11, result == 0x7F)
     end
 end
 
-local function cpu_uf_add(self, v1, v2, vc, vr, opc)
-    cpu_write_flag(self, 4, (band(v1, 0xF) + band(v2, 0xF) + vc) >= 0x10)
+local function cpu_uf_add(self, val1, val2, vc, result, opc)
+    cpu_write_flag(self, 4, (band(val1, 0xF) + band(val2, 0xF) + vc) >= 0x10)
     if band(opc, 0x01) == 1 then
-        cpu_write_flag(self, 0, band(vr, 0xFFFF) ~= vr)
-        cpu_write_flag(self, 11, (band(v1, 0x8000) == band(v2, 0x8000)) and (band(vr, 0x8000) ~= band(v1, 0x8000)))
+        cpu_write_flag(self, 0, band(result, 0xFFFF) ~= result)
+        cpu_write_flag(self, 11, (band(val1, 0x8000) == band(val2, 0x8000)) and (band(result, 0x8000) ~= band(val1, 0x8000)))
     else
-        cpu_write_flag(self, 0, band(vr, 0xFF) ~= vr)
-        cpu_write_flag(self, 11, (band(v1, 0x80) == band(v2, 0x80)) and (band(vr, 0x80) ~= band(v1, 0x80)))
+        cpu_write_flag(self, 0, band(result, 0xFF) ~= result)
+        cpu_write_flag(self, 11, (band(val1, 0x80) == band(val2, 0x80)) and (band(result, 0x80) ~= band(val1, 0x80)))
     end
 end
 
-local function cpu_uf_sub(self, v1, v2, vb, vr, opc)
-    cpu_write_flag(self, 4, (band(v2, 0xF) - band(v1, 0xF) - vb) < 0)
+local function cpu_uf_sub(self, val1, val2, vb, result, opc)
+    cpu_write_flag(self, 4, (band(val2, 0xF) - band(val1, 0xF) - vb) < 0)
     if band(opc, 0x01) == 1 then
-        cpu_write_flag(self, 0, band(vr, 0xFFFF) ~= vr)
-        cpu_write_flag(self, 11, (band(v1, 0x8000) ~= band(v2, 0x8000)) and (band(vr, 0x8000) == band(v1, 0x8000)))
+        cpu_write_flag(self, 0, band(result, 0xFFFF) ~= result)
+        cpu_write_flag(self, 11, (band(val1, 0x8000) ~= band(val2, 0x8000)) and (band(result, 0x8000) == band(val1, 0x8000)))
     else
-        cpu_write_flag(self, 0, band(vr, 0xFF) ~= vr)
-        cpu_write_flag(self, 11, (band(v1, 0x80) ~= band(v2, 0x80)) and (band(vr, 0x80) == band(v1, 0x80)))
+        cpu_write_flag(self, 0, band(result, 0xFF) ~= result)
+        cpu_write_flag(self, 11, (band(val1, 0x80) ~= band(val2, 0x80)) and (band(result, 0x80) == band(val1, 0x80)))
     end
 end
 
-local function cpu_uf_bit(self, vr, opc)
+local function cpu_uf_bit(self, result, opc)
     self.flags = band(self.flags, bnot(0x0801))
-    cpu_zsp(self, vr, opc)
+    cpu_zsp(self, result, opc)
 end
 
 local function cpu_shl(self, mrm, opcode)
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
-    if v1 >= 1 then
-        local v2 = cpu_read_rm(self, mrm, mrm.dst)
-        local w = band(opcode, 0x01)
-        local mask = 0xFFFF
-        if w == 0 then mask = 0xFF end
-        local msb = (rshift(mask, 1) + 1)
+    local val1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
+    local mask = 0xFFFF
 
-        local vr = lshift(v2, v1)
-        cpu_write_flag(self, 0, band(vr, (mask + 1)) ~= 0)
-        cpu_write_rm(self, mrm, mrm.dst, band(vr, mask))
-        cpu_zsp(self, band(vr, mask), opcode)
-        if v1 == 1 then
-            local msb_result = band(vr, msb) ~= 0
-            cpu_write_flag(self, 11, (band(self.flags, lshift(1, (0))) ~= 0) ~= msb_result)
-        end
+    if band(opcode, 0x01) == 0 then
+        mask = 0xFF
+    end
+
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local msb = rshift(mask, 1) + 1
+    local result = lshift(val2, val1)
+
+    cpu_write_flag(self, 0, band(result, (mask + 1)) ~= 0)
+    cpu_write_rm(self, mrm, mrm.dst, band(result, mask))
+    cpu_zsp(self, band(result, mask), opcode)
+
+    if val1 == 1 then
+        local msb_result = band(result, msb) ~= 0
+        cpu_write_flag(self, 11, (band(self.flags, 0x01) ~= 0) ~= msb_result)
     end
 end
 
 local function cpu_shr(self, mrm, opcode, arith)
-    local w = band(opcode, 0x01)
     local mask = 0x8000
-    if w == 0 then mask = 0x80 end
+    if band(opcode, 0x01) == 0 then
+        mask = 0x80
+    end
 
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr
-    if (arith) then
-        vr = v2
-        local shift1 = v1
-        while shift1 > 0 do
-            vr = bor(band(vr, mask), band(rshift(vr, 1), (mask - 1)))
-            shift1 = shift1 - 1
+    local val1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = 0
+
+    if arith then
+        result = val2
+        local shift = val1
+
+        while shift > 0 do
+            result = bor(band(result, mask), band(rshift(result, 1), (mask - 1)))
+            shift = shift - 1
         end
     else
-        vr = rshift(v2, v1)
+        result = rshift(val2, val1)
     end
-    cpu_write_rm(self, mrm, mrm.dst, vr)
-    cpu_zsp(self, vr, opcode)
 
-    if lshift(1, (band(v1, 0x1F) - 1)) > mask then
-        cpu_write_flag(self, 0, arith and (band(v2, mask) ~= 0))
+    cpu_write_rm(self, mrm, mrm.dst, result)
+    cpu_zsp(self, result, opcode)
+
+    if lshift(1, (band(val1, 0x1F) - 1)) > mask then
+        cpu_write_flag(self, 0, arith and (band(val2, mask) ~= 0))
     else
-        cpu_write_flag(self, 0, band(v2, lshift(1, (v1 - 1))) ~= 0)
+        cpu_write_flag(self, 0, band(val2, lshift(1, (val1 - 1))) ~= 0)
     end
-    if v1 == 1 then
-        cpu_write_flag(self, 11, (not arith) and (band(v2, mask) ~= 0))
+
+    if val1 == 1 then
+        cpu_write_flag(self, 11, (not arith) and (band(val2, mask) ~= 0))
     end
 end
 
@@ -451,206 +470,242 @@ end
 -- 2 - RCR
 -- 3 - RCL
 local function cpu_rotate(self, mrm, opcode, mode)
-    local w = band(opcode, 0x01)
     local shift = 15
-    if w == 0 then shift = 7 end
 
-    local v1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = v2
+    if band(opcode, 0x01) == 0 then
+        shift = 7
+    end
+
+    local val1 = band(cpu_read_rm(self, mrm, mrm.src), 0xFF)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = val2
     local cf = 0
     local of = 0
-    if (band(self.flags, lshift(1, (0))) ~= 0) then cf = 1 end
 
-    local shifts = v1
+    if band(self.flags, 0x01) ~= 0 then
+        cf = 1
+    end
+
+    local shifts = val1
     if shifts > 0 then
         if mode == 0 then
             shifts = band(shifts, shift)
             local shiftmask = lshift(1, shifts) - 1
-            cf = band(rshift(vr, band((shifts - 1), shift)), 0x01)
-            vr = bor(rshift(vr, shifts), lshift(band(vr, shiftmask), band((shift - shifts + 1), shift)))
-            of = band(bxor(rshift(vr, shift), rshift(vr, (shift - 1))), 0x01)
+            cf = band(rshift(result, band(shifts - 1, shift)), 0x01)
+            result = bor(rshift(result, shifts), lshift(band(result, shiftmask), band(shift - shifts + 1, shift)))
+            of = band(bxor(rshift(result, shift), rshift(result, shift - 1)), 0x01)
         elseif mode == 1 then
             shifts = band(shifts, shift)
-            cf = band(rshift(vr, band((shift - shifts + 1), shift)), 0x01)
-            vr = bor(band(lshift(vr, shifts), (lshift(1, (shift + 1)) - 1)), rshift(vr, band((shift - shifts + 1), shift)))
-            of = band(bxor(rshift(vr, shift), cf), 0x01)
+            cf = band(rshift(result, band(shift - shifts + 1, shift)), 0x01)
+            result = bor(band(lshift(result, shifts), lshift(1, shift + 1) - 1), rshift(result, band(shift - shifts + 1, shift)))
+            of = band(bxor(rshift(result, shift), cf), 0x01)
         elseif mode == 2 then
             shifts = shifts % (shift + 2)
+
             while shifts > 0 do
-                local newcf = band(vr, 0x01)
-                vr = bor(rshift(vr, 1), lshift(cf, shift))
+                local new_cf = band(result, 0x01)
+                result = bor(rshift(result, 1), lshift(cf, shift))
                 shifts = shifts - 1
-                cf = newcf
+                cf = new_cf
             end
-            of = band(bxor(rshift(vr, shift), rshift(vr, (shift - 1))), 0x01)
+
+            of = band(bxor(rshift(result, shift), rshift(result, shift - 1)), 0x01)
         elseif mode == 3 then
             shifts = shifts % (shift + 2)
+
             while shifts > 0 do
-                local newcf = band(rshift(vr, shift), 0x01)
-                vr = bor(band(lshift(vr, 1), (lshift(1, (shift + 1)) - 1)), cf)
+                local new_cf = band(rshift(result, shift), 0x01)
+                result = bor(band(lshift(result, 1), lshift(1, shift + 1) - 1), cf)
                 shifts = shifts - 1
-                cf = newcf
+                cf = new_cf
             end
-            of = band(bxor(rshift(vr, shift), cf), 0x01)
+
+            of = band(bxor(rshift(result, shift), cf), 0x01)
         end
 
-        cpu_write_rm(self, mrm, mrm.dst, band(vr, 0xFFFF))
+        cpu_write_rm(self, mrm, mrm.dst, band(result, 0xFFFF))
         cpu_write_flag(self, 0, cf == 1)
-        if v1 == 1 then
+
+        if val1 == 1 then
             cpu_write_flag(self, 11, of == 1)
         end
     end
 end
 
 local function cpu_mul(self, mrm, opcode)
-    local w = band(opcode, 0x01)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = v1 * v2
-    local vrf
-    if w == 1 then
-        vr = band(vr, 0xFFFFFFFF)
-        self.regs[3] = rshift(vr, 16)
-        self.regs[1] = band(vr, 0xFFFF)
-        vrf = rshift(vr, 16)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = val1 * val2
+    local ret = 0
+
+    if band(opcode, 0x01) == 1 then
+        result = band(result, 0xFFFFFFFF)
+        self.regs[3] = rshift(result, 16)
+        self.regs[1] = band(result, 0xFFFF)
+        ret = rshift(result, 16)
     else
-        vr = band(vr, 0xFFFF)
-        self.regs[1] = vr
-        vrf = rshift(vr, 8)
+        result = band(result, 0xFFFF)
+        self.regs[1] = result
+        ret = rshift(result, 8)
     end
 
-    cpu_write_flag(self, 0, vrf ~= 0)
-    cpu_write_flag(self, 11, vrf ~= 0)
+    cpu_write_flag(self, 0, ret ~= 0)
+    cpu_write_flag(self, 11, ret ~= 0)
 end
 
 local function cpu_imul(self, mrm, opcode)
-    local w = band(opcode, 0x01)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = 0
-    if w == 1 then
-        vr = (to_16(v1) * to_16(v2))
-        self.regs[3] = band(rshift(vr, 16), 0xFFFF)
-        self.regs[1] = band(vr, 0xFFFF)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = 0
 
-        cpu_write_flag(self, 0, (vr < -0x8000) or (vr >= 0x8000))
-        cpu_write_flag(self, 11, (vr < -0x8000) or (vr >= 0x8000))
+    if band(opcode, 0x01) == 1 then
+        result = (to_16(val1) * to_16(val2))
+        self.regs[3] = band(rshift(result, 16), 0xFFFF)
+        self.regs[1] = band(result, 0xFFFF)
+
+        cpu_write_flag(self, 0, (result < -0x8000) or (result >= 0x8000))
+        cpu_write_flag(self, 11, (result < -0x8000) or (result >= 0x8000))
     else
-        vr = (to_8(v1) * to_8(v2))
-        self.regs[1] = band(vr, 0xFFFF)
+        result = (to_8(val1) * to_8(val2))
+        self.regs[1] = band(result, 0xFFFF)
 
-        cpu_write_flag(self, 0, (vr < -0x80) or (vr >= 0x80))
-        cpu_write_flag(self, 11, (vr < -0x80) or (vr >= 0x80))
+        cpu_write_flag(self, 0, (result < -0x80) or (result >= 0x80))
+        cpu_write_flag(self, 11, (result < -0x80) or (result >= 0x80))
     end
 end
 
 local function cpu_div(self, mrm, opcode)
-    local w = band(opcode, 0x01)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    if w == 1 then
-        local v = bor(lshift(self.regs[3], 16), (self.regs[1]))
-        if v2 == 0 then
-            logger:error("i8086: Divide %d by zero", v2)
-            emit_interrupt(self, 0, false)
-            return
-        end
-        local vd = math.floor(v / v2)
-        local vr = v % v2
-        if vd > 0xFFFF then
-            logger:error("i8086: Overflow: %d / %d = %d", v, v2, vd)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+
+    if band(opcode, 0x01) == 1 then
+        local val = bor(lshift(self.regs[3], 16), self.regs[1])
+
+        if val2 == 0 then
+            logger:error("i8086: Divide %d by zero", val)
             emit_interrupt(self, 0, false)
             return
         end
 
-        self.regs[3] = band(vr, 0xFFFF)
-        self.regs[1] = band(vd, 0xFFFF)
+        local vall = math.floor(val / val2)
+        local valh = val % val2
+
+        if vall > 0xFFFF then
+            logger:error("i8086: Overflow: %d / %d = %d", val, val2, vall)
+            emit_interrupt(self, 0, false)
+            return
+        end
+
+        self.regs[3] = band(valh, 0xFFFF)
+        self.regs[1] = band(vall, 0xFFFF)
     else
-        local v = (self.regs[1])
-        if v2 == 0 then
-            logger:error("i8086: Divide %d by zero", v2)
-            emit_interrupt(self, 0, false)
-            return
-        end
-        local vd = math.floor(v / v2)
-        local vr = v % v2
-        if vd > 0xFF then
-            logger:error("i8086: Overflow: %d / %d = %d", v, v2, vd)
+        local val = self.regs[1]
+
+        if val2 == 0 then
+            logger:error("i8086: Divide %d by zero", val)
             emit_interrupt(self, 0, false)
             return
         end
 
-        self.regs[1] = bor(lshift(band(vr, 0xFF), 8), band(vd, 0xFF))
+        local vall = math.floor(val / val2)
+        local valh = val % val2
+
+        if vall > 0xFF then
+            logger:error("i8086: Overflow: %d / %d = %d", val, val2, vall)
+            emit_interrupt(self, 0, false)
+            return
+        end
+
+        self.regs[1] = bor(lshift(band(valh, 0xFF), 8), band(vall, 0xFF))
     end
 end
 
 local function cpu_idiv(self, mrm, opcode)
-    local w = band(opcode, 0x01)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    if w == 1 then
-        local v = bor(lshift(self.regs[3], 16), (self.regs[1]))
-        v = to_32(v)
-        v2 = to_16(v2)
-        if v2 == 0 then
-            logger:error("i8086: Divide %d by zero", v2)
-            emit_interrupt(self, 0, false)
-            return
-        end
-        local vd = v / v2
-        if vd >= 0 then vd = math.floor(vd) else vd = math.ceil(vd) end
-            local vr = math.fmod(v, v2)
-        if (vd >= 0x8000) or (vd < -0x8000) then
-            logger:error("i8086: Overflow: %d / %d = %d", v, v2, vd)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+
+    if band(opcode, 0x01) == 1 then
+        local val1 = to_32(bor(lshift(self.regs[3], 16), self.regs[1]))
+        val2 = to_16(val2)
+
+        if val2 == 0 then
+            logger:error("i8086: Divide %d by zero", val1)
             emit_interrupt(self, 0, false)
             return
         end
 
-        self.regs[3] = band(vr, 0xFFFF)
-        self.regs[1] = band(vd, 0xFFFF)
+        local vall = val1 / val2
+
+        if vall >= 0 then
+            vall = math.floor(vall)
+        else
+            vall = math.ceil(vall)
+        end
+
+        local valh = math.fmod(val1, val2)
+
+        if (vall >= 0x8000) or (vall < -0x8000) then
+            logger:error("i8086: Overflow: %d / %d = %d", val1, val2, vall)
+            emit_interrupt(self, 0, false)
+            return
+        end
+
+        self.regs[3] = band(valh, 0xFFFF)
+        self.regs[1] = band(vall, 0xFFFF)
     else
-        local v = (self.regs[1])
-        v = to_16(v)
-        v2 = to_8(v2)
-        if v2 == 0 then
-            logger:error("i8086: Divide %d by zero", v2)
-            emit_interrupt(self, 0, false)
-            return
-        end
-        local vd = math.floor(v / v2)
-        if vd >= 0 then vd = math.floor(vd) else vd = math.ceil(vd) end
-        local vr = math.fmod(v, v2)
-        if (vd >= 0x80) or (vd < -0x80) then
-            logger:error("i8086: Overflow: %d / %d = %d", v, v2, vd)
+        local val1 = to_16(self.regs[1])
+
+        val2 = to_8(val2)
+
+        if val2 == 0 then
+            logger:error("i8086: Divide %d by zero", val2)
             emit_interrupt(self, 0, false)
             return
         end
 
-        self.regs[1] = bor(lshift(band(vr, 0xFF), 8), band(vd, 0xFF))
+        local vall = math.floor(val1 / val2)
+
+        if vall >= 0 then
+            vall = math.floor(vall)
+        else
+            vall = math.ceil(vall)
+        end
+
+        local valh = math.fmod(val1, val2)
+
+        if (vall >= 0x80) or (vall < -0x80) then
+            logger:error("i8086: Overflow: %d / %d = %d", val1, val2, vall)
+            emit_interrupt(self, 0, false)
+            return
+        end
+
+        self.regs[1] = bor(lshift(band(valh, 0xFF), 8), band(vall, 0xFF))
     end
 end
 
 local function cpu_add(self, mrm, opcode, carry)
-    local w = band(opcode, 0x01)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vc = 0
-    if carry and (band(self.flags, lshift(1, (0))) ~= 0) then
-        vc = 1
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local cf = 0
+
+    if carry and (band(self.flags, 0x01) ~= 0) then
+        cf = 1
     end
-    local vr = v1 + v2 + vc
-    if w == 1 then
-        cpu_write_rm(self, mrm, mrm.dst, band(vr, 0xFFFF))
+
+    local result = val1 + val2 + cf
+
+    if band(opcode, 0x01) == 0x01 then
+        cpu_write_rm(self, mrm, mrm.dst, band(result, 0xFFFF))
     else
-        cpu_write_rm(self, mrm, mrm.dst, band(vr, 0xFF))
+        cpu_write_rm(self, mrm, mrm.dst, band(result, 0xFF))
     end
-    cpu_zsp(self, vr, opcode)
-    cpu_uf_add(self, v1, v2, vc, vr, opcode)
+
+    cpu_zsp(self, result, opcode)
+    cpu_uf_add(self, val1, val2, cf, result, opcode)
 end
 
-local function cpu_cmp(self, v2, v1, opcode)
-    local vr = v2 - v1
-    cpu_uf_sub(self, v1, v2, 0, vr, opcode)
-    cpu_zsp(self, vr, opcode)
+local function cpu_cmp(self, val2, val1, opcode)
+    local result = val2 - val1
+    cpu_uf_sub(self, val1, val2, 0, result, opcode)
+    cpu_zsp(self, result, opcode)
 end
 
 local function cpu_cmp_mrm(self, mrm, opcode)
@@ -658,53 +713,56 @@ local function cpu_cmp_mrm(self, mrm, opcode)
 end
 
 local function cpu_sub(self, mrm, opcode, borrow)
-    local w = band(opcode, 0x01)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vb = 0
-    if borrow and (band(self.flags, lshift(1, (0))) ~= 0) then
-        vb = 1
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local bf = 0
+
+    if borrow and (band(self.flags, 0x01) ~= 0) then
+        bf = 1
     end
-    local vr = v2 - v1 - vb
-    cpu_uf_sub(self, v1, v2, vb, vr, opcode)
-    if w == 1 then
-        vr = band(vr, 0xFFFF)
+
+    local result = val2 - val1 - bf
+    cpu_uf_sub(self, val1, val2, bf, result, opcode)
+
+    if band(opcode, 0x01) == 0x01 then
+        result = band(result, 0xFFFF)
     else
-        vr = band(vr, 0xFF)
+        result = band(result, 0xFF)
     end
-    cpu_write_rm(self, mrm, mrm.dst, vr)
-    cpu_zsp(self, vr, opcode)
+
+    cpu_write_rm(self, mrm, mrm.dst, result)
+    cpu_zsp(self, result, opcode)
 end
 
 local function cpu_xor(self, mrm, opc)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = bxor(v1, v2)
-    cpu_write_rm(self, mrm, mrm.dst, vr)
-    cpu_uf_bit(self, vr, opc)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = bxor(val1, val2)
+    cpu_write_rm(self, mrm, mrm.dst, result)
+    cpu_uf_bit(self, result, opc)
 end
 
 local function cpu_and(self, mrm, opc)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = band(v1, v2)
-    cpu_write_rm(self, mrm, mrm.dst, vr)
-    cpu_uf_bit(self, vr, opc)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = band(val1, val2)
+    cpu_write_rm(self, mrm, mrm.dst, result)
+    cpu_uf_bit(self, result, opc)
 end
 
 local function cpu_test(self, mrm, opc)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = band(v1, v2)
-    cpu_uf_bit(self, vr, opc)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = band(val1, val2)
+    cpu_uf_bit(self, result, opc)
 end
 
 local function cpu_or(self, mrm, opc)
-    local v1 = cpu_read_rm(self, mrm, mrm.src)
-    local v2 = cpu_read_rm(self, mrm, mrm.dst)
-    local vr = bor(v1, v2)
-    cpu_write_rm(self, mrm, mrm.dst, vr)
-    cpu_uf_bit(self, vr, opc)
+    local val1 = cpu_read_rm(self, mrm, mrm.src)
+    local val2 = cpu_read_rm(self, mrm, mrm.dst)
+    local result = bor(val1, val2)
+    cpu_write_rm(self, mrm, mrm.dst, result)
+    cpu_uf_bit(self, result, opc)
 end
 
 local function cpu_rep(self, cond)
@@ -730,7 +788,9 @@ local function cpu_rep(self, cond)
         end
 
         self.regs[2] = band((self.regs[2] - 1), 0xFFFF)
-        if self.regs[2] == 0 then break end
+        if self.regs[2] == 0  then
+            break
+        end
 
         local condResult = skip_opcodes
         if not condResult then condResult = cond() end
@@ -741,50 +801,49 @@ local function cpu_rep(self, cond)
             break
         end
     end
+
     return true
 end
 
 local function cpu_in(self, port)
-    local p = self.io_ports[port]
-    -- logger:debug("i8086: Cpu in: port:%02X", port)
-    if p == nil then
-        logger:warning("i8086: Cpu in: port:%02X not found", port)
-        return 0xFF
-    elseif type(p) == "function" then
-        return p(port)
+    local handler = self.io_ports[port]
+
+    -- logger:debug("i8086: Cpu in port:%02X", port)
+
+    if handler ~= nil then
+        return handler(self, port, nil)
     else
-        return p
+        logger:warning("i8086: Cpu in: port:%02X not found", port)
+        return 0xFFFF
     end
 end
 
 local function cpu_out(self, port, val)
-    local p = self.io_ports[port]
-    -- logger:warning("i8086: Cpu out: port:%02X", port)
-    if type(p) == "function" then
-        p(self, port, val)
-    elseif p ~= nil then
-        self.io_ports[port+1] = val
+    local handler = self.io_ports[port]
+
+    -- logger:debug("i8086: Cpu out port:%02X", port)
+
+    if handler ~= nil then
+        handler(self, port, val)
     else
-       logger:warning("i8086: Cpu out: port:%02X not found", port)
+        logger:warning("i8086: Cpu out: port:%02X not found", port)
     end
+end
+
+local function out_port(self, port, val)
+    cpu_out(self, port, val)
+end
+
+local function in_port(self, port)
+    return cpu_in(self, port)
 end
 
 local function port_get(self, port)
     return self.io_ports[port]
 end
 
-local function port_set(self, port, value, value2)
-    if type(value) == "function" and type(value2) == "function" then
-        self.io_ports[port + 1] = function(cpu, port, v)
-            if v then
-                value(cpu, port,v)
-            else
-                value2(cpu, port)
-            end
-        end
-    else
-        self.io_ports[port] = value
-    end
+local function port_set(self, port, handler)
+    self.io_ports[port] = handler
 end
 
 local function register_interrupt_handler(self, id, handler)
@@ -796,51 +855,51 @@ local function cpu_int_fake(self, id)
     local ah = rshift(ax, 8)
     local al = band(ax, 0xFF)
 
-    local h = self.interrupt_handlers[id + 1]
-    -- logger:warning("i8086: Interrupt: %02X, AH = %02X", id, ah)
-    if h then
-        local r = h(self, ax, ah, al)
-        if r then
-            return r
+    local handler = self.interrupt_handlers[id + 1]
+
+    if handler then
+        local result = handler(self, ax, ah, al)
+        if result then
+            return result
         end
     end
 
-    logger:warning("i8086: Unknown interrupt: %02X, AH = %02X", id, ah)
+    logger:info("i8086: Unknown interrupt: %02X, AH = %02X", id, ah)
 end
 
 local function cpu_int(self, id)
-    -- logger:debug("i8086: INT %02X", id)
+    -- logger:debug("i8086: Interrupt %02X, AH = %02X", id, rshift(self.regs[1], 8))
     local addr = self.memory:r16(id * 4)
-    local seg = self.memory:r16(id * 4 + 2)
+    local segment = self.memory:r16(id * 4 + 2)
 
     cpu_push16(self, self.flags)
     cpu_push16(self, self.segments[2])
     cpu_push16(self, self.ip)
 
-    self.segments[2] = seg
+    self.segments[2] = segment
     self.ip = addr
     self.halted = false
 
-    self.flags = band(self.flags, bnot(lshift(1, 9)))
+    self.flags = band(self.flags, bnot(bor(0x0200, 0x0100)))
 end
 
 local rel_jmp_conds = {
-    function(self) return (band(self.flags, lshift(1, (11))) ~= 0) end,
-    function(self) return not (band(self.flags, lshift(1, (11))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (0))) ~= 0) end,
-    function(self) return not (band(self.flags, lshift(1, (0))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (6))) ~= 0) end,
-    function(self) return not (band(self.flags, lshift(1, (6))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (0))) ~= 0) or (band(self.flags, lshift(1, (6))) ~= 0) end,
-    function(self) return not ((band(self.flags, lshift(1, (0))) ~= 0) or (band(self.flags, lshift(1, (6))) ~= 0)) end,
-    function(self) return (band(self.flags, lshift(1, (7))) ~= 0) end,
-    function(self) return not (band(self.flags, lshift(1, (7))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (2))) ~= 0) end,
-    function(self) return not (band(self.flags, lshift(1, (2))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (11))) ~= 0) ~= (band(self.flags, lshift(1, (7))) ~= 0) end,
-    function(self) return (band(self.flags, lshift(1, (11))) ~= 0) == (band(self.flags, lshift(1, (7))) ~= 0) end,
-    function(self) return ((band(self.flags, lshift(1, (11))) ~= 0) ~= (band(self.flags, lshift(1, (7))) ~= 0)) or (band(self.flags, lshift(1, (6))) ~= 0) end,
-    function(self) return not (((band(self.flags, lshift(1, (11))) ~= 0) ~= (band(self.flags, lshift(1, (7))) ~= 0)) or (band(self.flags, lshift(1, (6))) ~= 0)) end
+    function(self) return (band(self.flags, 0x0800) ~= 0) end, -- OF
+    function(self) return (band(self.flags, 0x0800) == 0) end, -- OF
+    function(self) return (band(self.flags, 0x0001) ~= 0) end, -- CF
+    function(self) return (band(self.flags, 0x0001) == 0) end, -- CF
+    function(self) return (band(self.flags, 0x0040) ~= 0) end, -- ZF
+    function(self) return (band(self.flags, 0x0040) == 0) end, -- ZF
+    function(self) return (band(self.flags, 0x0001) ~= 0) or (band(self.flags, 0x0040) ~= 0) end, -- CF / ZF
+    function(self) return not ((band(self.flags, 0x0001) ~= 0) or (band(self.flags, 0x0040) ~= 0)) end, --  CF / ZF
+    function(self) return (band(self.flags, 0x0080) ~= 0) end, -- SF
+    function(self) return not (band(self.flags, 0x0080) ~= 0) end, -- SF
+    function(self) return (band(self.flags, 0x0004) ~= 0) end, -- PF
+    function(self) return not (band(self.flags, 0x0004) ~= 0) end, -- PF
+    function(self) return (band(self.flags, 0x0800) ~= 0) ~= (band(self.flags, 0x0080) ~= 0) end, -- OF / SF
+    function(self) return (band(self.flags, 0x0800) ~= 0) == (band(self.flags, 0x0080) ~= 0) end, -- OF / SF
+    function(self) return ((band(self.flags, 0x0800) ~= 0) ~= (band(self.flags, 0x0080) ~= 0)) or (band(self.flags, 0x0040) ~= 0) end, -- OF / SF / ZF
+    function(self) return not (((band(self.flags, 0x0800) ~= 0) ~= (band(self.flags, 0x0080) ~= 0)) or (band(self.flags, 0x0040) ~= 0)) end -- OF / SF / ZF
 }
 
 local opcode_map = {}
@@ -850,45 +909,65 @@ opcode_map[0x90] = function(self, opcode) end
 
 -- ADD
 opcode_map[0x00] = function(self, opcode)
-    cpu_add(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode)
+    cpu_add(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
 end
-for i=0x01,0x05 do
-    opcode_map[i] = opcode_map[0x00]
-end
+opcode_map[0x01] = opcode_map[0x00]
+opcode_map[0x02] = opcode_map[0x00]
+opcode_map[0x03] = opcode_map[0x00]
+opcode_map[0x04] = opcode_map[0x00]
+opcode_map[0x05] = opcode_map[0x00]
 
--- PUSH/POP ES
-opcode_map[0x06] = function(self, opcode) cpu_push16(self, self.segments[1]) end
-opcode_map[0x07] = function(self, opcode) self.segments[1] = cpu_pop16(self) end
+-- PUSH seg
+opcode_map[0x06] = function(self, opcode) cpu_push16(self, self.segments[1]) end -- ES
+opcode_map[0x0E] = function(self, opcode) cpu_push16(self, self.segments[2]) end -- CS
+opcode_map[0x16] = function(self, opcode) cpu_push16(self, self.segments[3]) end -- SS
+opcode_map[0x1E] = function(self, opcode) cpu_push16(self, self.segments[4]) end -- DS
+
+-- POP seg
+opcode_map[0x07] = function(self, opcode) self.segments[1] = cpu_pop16(self) end -- ES
+opcode_map[0x0F] = function(self, opcode) self.segments[2] = cpu_pop16(self) end -- CS
+opcode_map[0x17] = function(self, opcode) self.segments[3] = cpu_pop16(self) end -- SS
+opcode_map[0x1F] = function(self, opcode) self.segments[4] = cpu_pop16(self) end -- DS
 
 -- OR
-opcode_map[0x08] = function(self, opcode) cpu_or(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode) end
-for i=0x09,0x0D do opcode_map[i] = opcode_map[0x08] end
-
--- PUSH CS
-opcode_map[0x0E] = function(self, opcode) cpu_push16(self, self.segments[2]) end
-
--- POP CS (8086)
-opcode_map[0x0F] = function(self, opcode) self.segments[2] = cpu_pop16(self) end
+opcode_map[0x08] = function(self, opcode)
+    cpu_or(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
+end
+opcode_map[0x09] = opcode_map[0x08]
+opcode_map[0x0A] = opcode_map[0x08]
+opcode_map[0x0B] = opcode_map[0x08]
+opcode_map[0x0C] = opcode_map[0x08]
+opcode_map[0x0D] = opcode_map[0x08]
 
 -- ADC
-opcode_map[0x10] = function(self, opcode) cpu_add(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode, true) end
-for i=0x11,0x15 do opcode_map[i] = opcode_map[0x10] end
-
--- PUSH/POP SS
-opcode_map[0x16] = function(self, opcode) cpu_push16(self, self.segments[3]) end
-opcode_map[0x17] = function(self, opcode) self.segments[3] = cpu_pop16(self) end
+opcode_map[0x10] = function(self, opcode)
+    cpu_add(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode, true)
+end
+opcode_map[0x11] = opcode_map[0x10]
+opcode_map[0x12] = opcode_map[0x10]
+opcode_map[0x13] = opcode_map[0x10]
+opcode_map[0x14] = opcode_map[0x10]
+opcode_map[0x15] = opcode_map[0x10]
 
 -- SBB
-opcode_map[0x18] = function(self, opcode) cpu_sub(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode, true) end
-for i=0x19,0x1D do opcode_map[i] = opcode_map[0x18] end
-
--- PUSH/POP DS
-opcode_map[0x1E] = function(self, opcode) cpu_push16(self, self.segments[4]) end
-opcode_map[0x1F] = function(self, opcode) self.segments[4] = cpu_pop16(self) end
+opcode_map[0x18] = function(self, opcode)
+    cpu_sub(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode, true)
+end
+opcode_map[0x19] = opcode_map[0x18]
+opcode_map[0x1A] = opcode_map[0x18]
+opcode_map[0x1B] = opcode_map[0x18]
+opcode_map[0x1C] = opcode_map[0x18]
+opcode_map[0x1D] = opcode_map[0x18]
 
 -- AND
-opcode_map[0x20] = function(self, opcode) cpu_and(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode) end
-for i=0x21,0x25 do opcode_map[i] = opcode_map[0x20] end
+opcode_map[0x20] = function(self, opcode)
+    cpu_and(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
+end
+opcode_map[0x21] = opcode_map[0x20]
+opcode_map[0x22] = opcode_map[0x20]
+opcode_map[0x23] = opcode_map[0x20]
+opcode_map[0x24] = opcode_map[0x20]
+opcode_map[0x25] = opcode_map[0x20]
 
 -- ES:
 opcode_map[0x26] = function(self, opcode)
@@ -898,30 +977,6 @@ opcode_map[0x26] = function(self, opcode)
     return r
 end
 
--- DAA
-opcode_map[0x27] = function(self, opcode)
-    local al = band(self.regs[1], 0xFF)
-    local old_al = al
-    local old_cf = (band(self.flags, lshift(1, (0))) ~= 0)
-    if (band(old_al, 0x0F) > 0x9) or (band(self.flags, lshift(1, (4))) ~= 0) then
-        al = al + 0x6
-        cpu_write_flag(self, 0, old_cf or (al > 0xFF))
-        self.flags = bor(self.flags, lshift(1, (4)))
-    else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (4))))
-    end
-    if (old_al > 0x99) or old_cf then
-        al = al + 0x60
-        self.flags = bor(self.flags, lshift(1, (0)))
-    end
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(al, 0xFF))
-    cpu_zsp(self, al, 0)
-end
-
--- SUB
-opcode_map[0x28] = function(self, opcode) cpu_sub(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode) end
-for i=0x29,0x2D do opcode_map[i] = opcode_map[0x28] end
-
 -- CS:
 opcode_map[0x2E] = function(self, opcode)
     self.segment_mode = 2
@@ -929,32 +984,6 @@ opcode_map[0x2E] = function(self, opcode)
     self.segment_mode = nil
     return r
 end
-
--- DAS
-opcode_map[0x2F] = function(self, opcode)
-    local al = band(self.regs[1], 0xFF)
-    local old_al = al
-    local old_cf = (band(self.flags, lshift(1, (0))) ~= 0)
-    if (band(al, 0x0F) > 0x9) or (band(self.flags, lshift(1, (4))) ~= 0) then
-        al = al - 0x6
-        cpu_write_flag(self, 0, old_cf or (al < 0))
-        self.flags = bor(self.flags, lshift(1, (4)))
-    else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (4))))
-    end
-    if ((al) > 0x99) or old_cf then
-        al = al - 0x60
-        self.flags = bor(self.flags, lshift(1, (0)))
-    else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (0))))
-    end
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(al, 0xFF))
-    cpu_zsp(self, al, 0)
-end
-
--- XOR
-opcode_map[0x30] = function(self, opcode) cpu_xor(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode) end
-for i=0x31,0x35 do opcode_map[i] = opcode_map[0x30] end
 
 -- SS:
 opcode_map[0x36] = function(self, opcode)
@@ -964,24 +993,6 @@ opcode_map[0x36] = function(self, opcode)
     return r
 end
 
--- AAA
-opcode_map[0x37] = function(self, opcode)
-    local al = band(self.regs[1], 0xFF)
-    if (band(al, 0x0F) >= 0x9) or (band(self.flags, lshift(1, (4))) ~= 0) then
-        self.regs[1] = band((self.regs[1] + 0x106), 0xFFFF)
-        self.flags = bor(self.flags, lshift(1, (0)))
-        self.flags = bor(self.flags, lshift(1, (4)))
-    else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (0))))
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (4))))
-    end
-    self.regs[1] = band(self.regs[1], 0xFF0F)
-end
-
--- CMP
-opcode_map[0x38] = function(self, opcode) cpu_cmp_mrm(self, mrm6_table[band((opcode), 0x7)](self, (opcode)), opcode) end
-for i=0x39,0x3D do opcode_map[i] = opcode_map[0x38] end
-
 -- DS:
 opcode_map[0x3E] = function(self, opcode)
     self.segment_mode = 4
@@ -990,44 +1001,120 @@ opcode_map[0x3E] = function(self, opcode)
     return r
 end
 
+-- DAA
+opcode_map[0x27] = function(self, opcode)
+    local al = band(self.regs[1], 0xFF)
+    local old_al = al
+    local old_cf = (band(self.flags, 0x01) == 0x01)
+
+    if (band(self.flags, 0x10) == 0x10) or (band(old_al, 0x0F) > 0x9) then
+        al = al + 0x6
+        cpu_write_flag(self, 0, old_cf or (al > 0xFF))
+        self.flags = bor(self.flags, 0x10)
+    else
+        self.flags = band(self.flags, bnot(0x10))
+    end
+
+    if old_cf or (old_al > 0x99) then
+        al = al + 0x60
+        self.flags = bor(self.flags, 0x01)
+    end
+
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(al, 0xFF))
+    cpu_zsp(self, al, 0)
+end
+
+-- DAS
+opcode_map[0x2F] = function(self, opcode)
+    local al = band(self.regs[1], 0xFF)
+    local old_al = al
+    local old_cf = (band(self.flags, 0x01) == 0x01)
+
+    if (band(self.flags, 0x10) == 0x10) or (band(old_al, 0xF) > 0x9) then
+        al = al - 0x6
+        cpu_write_flag(self, 0, old_cf or (al > 0xFF))
+        self.flags = bor(self.flags, 0x10)
+    else
+        self.flags = band(self.flags, bnot(0x10))
+    end
+
+    if old_cf or (old_al > 0x99) then
+        al = al - 0x60
+        self.flags = bor(self.flags, 0x01)
+    end
+
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(al, 0xFF))
+    cpu_zsp(self, al, 0)
+end
+
+-- AAA
+opcode_map[0x37] = function(self, opcode)
+    local al = band(self.regs[1], 0xFF)
+
+    if (band(self.flags, 0x10) == 0x10) or (band(al, 0xF) >= 0x9) then
+        self.regs[1] = band(self.regs[1] + 0x106, 0xFFFF)
+        self.flags = bor(self.flags, 0x01) -- Set CF
+        self.flags = bor(self.flags, 0x10) -- Set AF
+    else
+        self.flags = band(self.flags, bnot(0x01)) -- Clear CF
+        self.flags = band(self.flags, bnot(0x10)) -- Clear AF
+    end
+
+    self.regs[1] = band(self.regs[1], 0xFF0F)
+end
+
 -- AAS
 opcode_map[0x3F] = function(self, opcode)
     local al = band(self.regs[1], 0xFF)
-    if (band(al, 0x0F) >= 0x9) or (band(self.flags, lshift(1, (4))) ~= 0) then
+
+    if (band(self.flags, 0x10) ~= 0) or (band(al, 0x0F) >= 0x9) then
         self.regs[1] = band((self.regs[1] - 0x006), 0xFFFF)
         local ah = rshift(band(self.regs[1], 0xFF00), 8)
         ah = band((ah - 1), 0xFF)
         self.regs[1] = bor(band(self.regs[1], 0xFF), lshift(ah, 8))
-        self.flags = bor(self.flags, lshift(1, (0)))
-        self.flags = bor(self.flags, lshift(1, (4)))
+        self.flags = bor(self.flags, 0x01) -- Set CF
+        self.flags = bor(self.flags, 0x10) -- Set AF
     else
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (0))))
-        self.flags = band(self.flags, bxor(self.flags, lshift(1, (4))))
+        self.flags = band(self.flags, bnot(0x01)) -- Clear CF
+        self.flags = band(self.flags, bnot(0x10)) -- Clear AF
     end
+
     self.regs[1] = band(self.regs[1], 0xFF0F)
 end
 
 -- INC
-opcode_map[(0x40)] = function(self, opcode) local v = self.regs[(1)]; v = band((v + 1), 0xFFFF); self.regs[(1)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x41)] = function(self, opcode) local v = self.regs[(2)]; v = band((v + 1), 0xFFFF); self.regs[(2)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x42)] = function(self, opcode) local v = self.regs[(3)]; v = band((v + 1), 0xFFFF); self.regs[(3)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x43)] = function(self, opcode) local v = self.regs[(4)]; v = band((v + 1), 0xFFFF); self.regs[(4)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x44)] = function(self, opcode) local v = self.regs[(5)]; v = band((v + 1), 0xFFFF); self.regs[(5)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x45)] = function(self, opcode) local v = self.regs[(6)]; v = band((v + 1), 0xFFFF); self.regs[(6)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x46)] = function(self, opcode) local v = self.regs[(7)]; v = band((v + 1), 0xFFFF); self.regs[(7)] = v; cpu_inc(self, v, 1) end
-opcode_map[(0x47)] = function(self, opcode) local v = self.regs[(8)]; v = band((v + 1), 0xFFFF); self.regs[(8)] = v; cpu_inc(self, v, 1) end
+opcode_map[0x40] = function(self, opcode)
+    local reg = band(opcode, 0x7) + 1
+    local val = self.regs[reg]
+    val = band(val + 1, 0xFFFF)
+    self.regs[reg] = val
+    cpu_inc(self, val, 1)
+end
+opcode_map[0x41] = opcode_map[0x40]
+opcode_map[0x42] = opcode_map[0x40]
+opcode_map[0x43] = opcode_map[0x40]
+opcode_map[0x44] = opcode_map[0x40]
+opcode_map[0x45] = opcode_map[0x40]
+opcode_map[0x46] = opcode_map[0x40]
+opcode_map[0x47] = opcode_map[0x40]
 
 -- DEC
-opcode_map[(0x48)] = function(self, opcode) local v = self.regs[(1)]; v = band((v - 1), 0xFFFF); self.regs[(1)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x49)] = function(self, opcode) local v = self.regs[(2)]; v = band((v - 1), 0xFFFF); self.regs[(2)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4A)] = function(self, opcode) local v = self.regs[(3)]; v = band((v - 1), 0xFFFF); self.regs[(3)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4B)] = function(self, opcode) local v = self.regs[(4)]; v = band((v - 1), 0xFFFF); self.regs[(4)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4C)] = function(self, opcode) local v = self.regs[(5)]; v = band((v - 1), 0xFFFF); self.regs[(5)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4D)] = function(self, opcode) local v = self.regs[(6)]; v = band((v - 1), 0xFFFF); self.regs[(6)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4E)] = function(self, opcode) local v = self.regs[(7)]; v = band((v - 1), 0xFFFF); self.regs[(7)] = v; cpu_dec(self, v, 1) end
-opcode_map[(0x4F)] = function(self, opcode) local v = self.regs[(8)]; v = band((v - 1), 0xFFFF); self.regs[(8)] = v; cpu_dec(self, v, 1) end
+opcode_map[0x48] = function(self, opcode)
+    local reg = band(opcode, 0x7) + 1
+    local val = self.regs[reg]
+    val = band(val - 1, 0xFFFF)
+    self.regs[reg] = val
+    cpu_dec(self, val, 1)
+end
+opcode_map[0x49] = opcode_map[0x48]
+opcode_map[0x4A] = opcode_map[0x48]
+opcode_map[0x4B] = opcode_map[0x48]
+opcode_map[0x4C] = opcode_map[0x48]
+opcode_map[0x4D] = opcode_map[0x48]
+opcode_map[0x4E] = opcode_map[0x48]
+opcode_map[0x4F] = opcode_map[0x48]
 
--- PUSH/POP
+-- PUSH r16
 opcode_map[0x50] = function(self, opcode) cpu_push16(self, self.regs[1]) end
 opcode_map[0x51] = function(self, opcode) cpu_push16(self, self.regs[2]) end
 opcode_map[0x52] = function(self, opcode) cpu_push16(self, self.regs[3]) end
@@ -1036,6 +1123,7 @@ opcode_map[0x54] = function(self, opcode) cpu_push16(self, self.regs[5]) end
 opcode_map[0x55] = function(self, opcode) cpu_push16(self, self.regs[6]) end
 opcode_map[0x56] = function(self, opcode) cpu_push16(self, self.regs[7]) end
 opcode_map[0x57] = function(self, opcode) cpu_push16(self, self.regs[8]) end
+-- POP r16
 opcode_map[0x58] = function(self, opcode) self.regs[1] = cpu_pop16(self) end
 opcode_map[0x59] = function(self, opcode) self.regs[2] = cpu_pop16(self) end
 opcode_map[0x5A] = function(self, opcode) self.regs[3] = cpu_pop16(self) end
@@ -1045,30 +1133,60 @@ opcode_map[0x5D] = function(self, opcode) self.regs[6] = cpu_pop16(self) end
 opcode_map[0x5E] = function(self, opcode) self.regs[7] = cpu_pop16(self) end
 opcode_map[0x5F] = function(self, opcode) self.regs[8] = cpu_pop16(self) end
 
+-- SUB
+opcode_map[0x28] = function(self, opcode)
+    cpu_sub(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
+end
+opcode_map[0x29] = opcode_map[0x28]
+opcode_map[0x2A] = opcode_map[0x28]
+opcode_map[0x2B] = opcode_map[0x28]
+opcode_map[0x2C] = opcode_map[0x28]
+opcode_map[0x2D] = opcode_map[0x28]
+
+-- XOR
+opcode_map[0x30] = function(self, opcode)
+    cpu_xor(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
+end
+opcode_map[0x31] = opcode_map[0x30]
+opcode_map[0x32] = opcode_map[0x30]
+opcode_map[0x33] = opcode_map[0x30]
+opcode_map[0x34] = opcode_map[0x30]
+opcode_map[0x35] = opcode_map[0x30]
+
+-- CMP
+opcode_map[0x38] = function(self, opcode)
+    cpu_cmp_mrm(self, mrm6_table[band(opcode, 0x7)](self, opcode), opcode)
+end
+opcode_map[0x39] = opcode_map[0x38]
+opcode_map[0x3A] = opcode_map[0x38]
+opcode_map[0x3B] = opcode_map[0x38]
+opcode_map[0x3C] = opcode_map[0x38]
+opcode_map[0x3D] = opcode_map[0x38]
+
 -- JMP
-for i=0x70,0x7F do
+for i = 0x70, 0x7F, 1 do
     local cond = rel_jmp_conds[i - 0x6F]
     opcode_map[i] = function(self, opcode)
         local offset = advance_ip(self)
         if cond(self) then
-            self.ip = band((self.ip + to_8(offset)), 0xFFFF)
+            self.ip = band(self.ip + to_8(offset), 0xFFFF)
         end
     end
 end
 
-for i=0,15 do
+for i = 0, 15, 1 do
     opcode_map[0x60 + i] = opcode_map[0x70 + i]
 end
 
 local grp1_table = {
-    [0]=cpu_add,
-    [1]=cpu_or,
-    [2]=function(self, a,b) cpu_add(self, a,b,true) end,
-    [3]=function(self, a,b) cpu_sub(self, a,b,true) end,
-    [4]=cpu_and,
-    [5]=function(self, a,b) cpu_sub(self, a,b,false) end,
-    [6]=cpu_xor,
-    [7]=function(self, a,b) cpu_cmp_mrm(self, a,b) end
+    [0] = cpu_add,
+    [1] = cpu_or,
+    [2] = function(self, a,b) cpu_add(self, a, b, true) end,
+    [3] = function(self, a,b) cpu_sub(self, a, b, true) end,
+    [4] = cpu_and,
+    [5] = function(self, a,b) cpu_sub(self, a, b, false) end,
+    [6] = cpu_xor,
+    [7] = function(self, a,b) cpu_cmp_mrm(self, a, b) end
 }
 
 -- GRP1
@@ -1120,14 +1238,11 @@ opcode_map[0x89] = function(self, opcode) cpu_mov(self, cpu_mod_rm(self, 1)) end
 opcode_map[0x8A] = function(self, opcode) cpu_mov(self, cpu_mod_rm(self, 2)) end
 opcode_map[0x8B] = function(self, opcode) cpu_mov(self, cpu_mod_rm(self, 3)) end
 
--- MOV segment
+-- MOV rm, seg
 opcode_map[0x8C] = function(self, opcode)
     local mrm = cpu_mod_rm(self, opcode, 1024)
-    if mrm.dst == 26 + self.seg_cs then
-        logger:warning("i8086: Tried writing to CS segment!")
-    end
     cpu_mov(self, mrm)
-    if mrm.dst == 26+self.seg_ss then
+    if mrm.dst == 28 then
         return run_one(self, true, true)
     end
 end
@@ -1139,25 +1254,29 @@ opcode_map[0x8D] = function(self, opcode)
     cpu_write_rm(self, mrm, mrm.dst, cpu_addr_rm(self, mrm, mrm.src))
 end
 
--- POP m16
+-- POPW
 opcode_map[0x8F] = function(self, opcode)
     local mrm = cpu_mod_rm(self, 1)
     cpu_write_rm(self, mrm, mrm.dst, cpu_pop16(self))
 end
 
--- XCHG (XCHG AX, AX == NOP)
-opcode_map[(0x91)] = function(self, opcode) local v = self.regs[(2)]; self.regs[(2)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x92)] = function(self, opcode) local v = self.regs[(3)]; self.regs[(3)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x93)] = function(self, opcode) local v = self.regs[(4)]; self.regs[(4)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x94)] = function(self, opcode) local v = self.regs[(5)]; self.regs[(5)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x95)] = function(self, opcode) local v = self.regs[(6)]; self.regs[(6)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x96)] = function(self, opcode) local v = self.regs[(7)]; self.regs[(7)] = self.regs[1]; self.regs[1] = v; end
-opcode_map[(0x97)] = function(self, opcode) local v = self.regs[(8)]; self.regs[(8)] = self.regs[1]; self.regs[1] = v; end
+-- XCHG
+opcode_map[0x91] = function(self, opcode) local v = self.regs[2]; self.regs[2] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x92] = function(self, opcode) local v = self.regs[3]; self.regs[3] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x93] = function(self, opcode) local v = self.regs[4]; self.regs[4] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x94] = function(self, opcode) local v = self.regs[5]; self.regs[5] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x95] = function(self, opcode) local v = self.regs[6]; self.regs[6] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x96] = function(self, opcode) local v = self.regs[7]; self.regs[7] = self.regs[1]; self.regs[1] = v; end
+opcode_map[0x97] = function(self, opcode) local v = self.regs[8]; self.regs[8] = self.regs[1]; self.regs[1] = v; end
 
 -- CBW
 opcode_map[0x98] = function(self, opcode)
     local v = band(self.regs[1], 0xFF)
-    if v >= 0x80 then v = bor(v, 0xFF00) end
+
+    if v >= 0x80 then
+        v = bor(v, 0xFF00)
+    end
+
     self.regs[1] = v
 end
 
@@ -1172,23 +1291,28 @@ end
 
 -- CALL far
 opcode_map[0x9A] = function(self, opcode)
-    local newIp = advance_ip16(self)
-    local newCs = advance_ip16(self)
+    local new_ip = advance_ip16(self)
+    local new_cs = advance_ip16(self)
+
     cpu_push16(self, self.segments[2])
     cpu_push16(self, self.ip)
-    self.ip = newIp
-    self.segments[2] = newCs
+
+    self.ip = new_ip
+    self.segments[2] = new_cs
 end
 
--- PUSHF/POPF
+-- PUSHF
 opcode_map[0x9C] = function(self, opcode) cpu_push16(self, self.flags) end
 
+-- POPF
 opcode_map[0x9D] = function(self, opcode) self.flags = bor(cpu_pop16(self), 0xF002) end
 
--- SAHF/LAHF
+-- SAHF
 opcode_map[0x9E] = function(self, opcode)
     self.flags = bor(band(self.flags, 0xFF00), rshift(band(self.regs[1], 0xFF00), 8))
 end
+
+-- LAHF
 opcode_map[0x9F] = function(self, opcode)
     self.regs[1] = bor(band(self.regs[1], 0xFF), lshift(band(self.flags, 0xFF), 8))
 end
@@ -1196,56 +1320,60 @@ end
 -- MOV offs->AL
 opcode_map[0xA0] = function(self, opcode)
     local addr = advance_ip16(self)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[(lshift(self.segments[(self.segment_mode or (4))], 4) + (addr))])
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[lshift(self.segments[(self.segment_mode or 4)], 4) + addr])
 end
 
 -- MOV offs->AX
 opcode_map[0xA1] = function(self, opcode)
     local addr = advance_ip16(self)
-    self.regs[1] = self.memory:r16((lshift(self.segments[(self.segment_mode or (4))], 4) + (addr)))
+    self.regs[1] = self.memory:r16(lshift(self.segments[self.segment_mode or 4], 4) + addr)
 end
 
 -- MOV AL->offs
 opcode_map[0xA2] = function(self, opcode)
     local addr = advance_ip16(self)
-    self.memory[(lshift(self.segments[(self.segment_mode or (4))], 4) + (addr))] = band(self.regs[1], 0xFF)
+    self.memory[lshift(self.segments[self.segment_mode or 4], 4) + addr] = band(self.regs[1], 0xFF)
 end
 
 -- MOV AX->offs
 opcode_map[0xA3] = function(self, opcode)
     local addr = advance_ip16(self)
-    self.memory:w16((lshift(self.segments[(self.segment_mode or (4))], 4) + (addr)), self.regs[1])
+    self.memory:w16(lshift(self.segments[self.segment_mode or 4], 4) + addr, self.regs[1])
 end
 
 -- MOVSB/MOVSW
 opcode_map[0xA4] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    local addrDst = (lshift(self.segments[(self.seg_es)+1], 4)+(self.regs[8]))
-    self.memory[addrDst] = self.memory[addrSrc]
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    self.memory[addr_dst] = self.memory[addr_src]
     cpu_incdec_dir(self, 7, 1)
     cpu_incdec_dir(self, 8, 1)
 end
 
 opcode_map[0xA5] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    local addrDst = (lshift(self.segments[(self.seg_es)+1],4)+(self.regs[8]))
-    self.memory:w16(addrDst, self.memory:r16(addrSrc))
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    self.memory:w16(addr_dst, self.memory:r16(addr_src))
     cpu_incdec_dir(self, 7, 2)
     cpu_incdec_dir(self, 8, 2)
 end
 
 -- CMPSB/CMPSW
 opcode_map[0xA6] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    local addrDst = (lshift(self.segments[(self.seg_es)+1],4)+(self.regs[8]))
-    cpu_cmp(self, self.memory[addrSrc], self.memory[addrDst], opcode)
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    cpu_cmp(self, self.memory[addr_src], self.memory[addr_dst], opcode)
     cpu_incdec_dir(self, 7, 1)
     cpu_incdec_dir(self, 8, 1)
 end
 opcode_map[0xA7] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    local addrDst = (lshift(self.segments[(self.seg_es)+1], 4)+(self.regs[8]))
-    cpu_cmp(self, self.memory:r16(addrSrc), self.memory:r16(addrDst), opcode)
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    cpu_cmp(self, self.memory:r16(addr_src), self.memory:r16(addr_dst), opcode)
     cpu_incdec_dir(self, 7, 2)
     cpu_incdec_dir(self, 8, 2)
 end
@@ -1261,37 +1389,43 @@ end
 
 -- STOSB/STOSW
 opcode_map[0xAA] = function(self, opcode)
-    local addrDst = (lshift(self.segments[(self.seg_es)+1],4)+(self.regs[8]))
-    self.memory[addrDst] = band(self.regs[1], 0xFF)
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    self.memory[addr_dst] = band(self.regs[1], 0xFF)
     cpu_incdec_dir(self, 8, 1)
 end
 opcode_map[0xAB] = function(self, opcode)
-    local addrDst = (lshift(self.segments[(self.seg_es)+1], 4)+(self.regs[8]))
-    self.memory:w16(addrDst, self.regs[1])
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    self.memory:w16(addr_dst, self.regs[1])
     cpu_incdec_dir(self, 8, 2)
 end
 
 -- LODSB/LODSW
 opcode_map[0xAC] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[addrSrc])
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[addr_src])
     cpu_incdec_dir(self, 7, 1)
 end
 opcode_map[0xAD] = function(self, opcode)
-    local addrSrc = (lshift(self.segments[(self.segment_mode or (4))], 4) + (self.regs[7]))
-    self.regs[1] = self.memory:r16(addrSrc)
+    local addr_src = lshift(self.segments[self.segment_mode or 4], 4) + self.regs[7]
+
+    self.regs[1] = self.memory:r16(addr_src)
     cpu_incdec_dir(self, 7, 2)
 end
 
 -- SCASB/SCASW
 opcode_map[0xAE] = function(self, opcode)
-    local addrDst = (lshift(self.segments[(self.seg_es)+1], 4)+(self.regs[8]))
-    cpu_cmp(self, band(self.regs[1], 0xFF), self.memory[addrDst], opcode)
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    cpu_cmp(self, band(self.regs[1], 0xFF), self.memory[addr_dst], opcode)
     cpu_incdec_dir(self, 8, 1)
 end
 opcode_map[0xAF] = function(self, opcode)
-    local addrDst = (lshift(self.segments[(self.seg_es)+1], 4)+(self.regs[8]))
-    cpu_cmp(self, self.regs[1], self.memory:r16(addrDst), opcode)
+    local addr_dst = lshift(self.segments[1], 4) + self.regs[8]
+
+    cpu_cmp(self, self.regs[1], self.memory:r16(addr_dst), opcode)
     cpu_incdec_dir(self, 8, 2)
 end
 
@@ -1332,11 +1466,13 @@ opcode_map[0xC4] = function(self, opcode)
     local mrm = cpu_mod_rm(self, 3)
     local addr = cpu_addr_rm(self, mrm, mrm.src)
     local defseg = cpu_seg_rm(self, mrm, mrm.src)
-    cpu_write_rm(self, mrm, mrm.dst, self.memory:r16((lshift(self.segments[(self.segment_mode or (defseg+1))], 4) + (addr))))
+
+    cpu_write_rm(self, mrm, mrm.dst, self.memory:r16(lshift(self.segments[self.segment_mode or (defseg + 1)], 4) + addr))
+
     if opcode == 0xC5 then
-        self.segments[4] = self.memory:r16((lshift(self.segments[(self.segment_mode or (defseg+1))], 4) + (addr + 2)))
+        self.segments[4] = self.memory:r16((lshift(self.segments[(self.segment_mode or (defseg + 1))], 4) + (addr + 2)))
     else
-        self.segments[1] = self.memory:r16((lshift(self.segments[(self.segment_mode or (defseg+1))], 4) + (addr + 2)))
+        self.segments[1] = self.memory:r16((lshift(self.segments[(self.segment_mode or (defseg + 1))], 4) + (addr + 2)))
     end
 end
 opcode_map[0xC5] = opcode_map[0xC4]
@@ -1371,11 +1507,13 @@ opcode_map[0xCC] = function(self, opcode)
 end
 
 -- INT imm
-opcode_map[0xCD] = function(self, opcode) cpu_int(self, advance_ip(self)) end
+opcode_map[0xCD] = function(self, opcode)
+    cpu_int(self, advance_ip(self))
+end
 
 -- INTO
 opcode_map[0xCE] = function(self, opcode)
-    if (band(self.flags, lshift(1, (11))) ~= 0) then
+    if band(self.flags, 0x800) ~= 0 then
         cpu_int(self, 4)
     end
 end
@@ -1384,18 +1522,18 @@ end
 opcode_map[0xCF] = function(self, opcode)
     self.ip = cpu_pop16(self)
     self.segments[2] = cpu_pop16(self)
-    self.flags = cpu_pop16(self)
+    self.flags = bor(cpu_pop16(self), 0x0002)
 end
 
 local grp2_table = {
-    function(self, a,b) cpu_rotate(self, a,b,1) end,
-    function(self, a,b) cpu_rotate(self, a,b,0) end,
-    function(self, a,b) cpu_rotate(self, a,b,3) end,
-    function(self, a,b) cpu_rotate(self, a,b,2) end,
+    function(self, a,b) cpu_rotate(self, a, b, 1) end,
+    function(self, a,b) cpu_rotate(self, a, b, 0) end,
+    function(self, a,b) cpu_rotate(self, a, b, 3) end,
+    function(self, a,b) cpu_rotate(self, a, b, 2) end,
     cpu_shl,
     cpu_shr,
-    cpu_shl, -- SAL
-    function(self, a,b) cpu_shr(self, a,b,true) end
+    cpu_shl,
+    function(self, a,b) cpu_shr(self, a, b, true) end
 }
 
 -- GRP2
@@ -1431,13 +1569,13 @@ opcode_map[0xD5] = function(self, opcode)
     local base = advance_ip(self)
     local old_al = band(self.regs[1], 0xFF)
     local old_ah = band(rshift(self.regs[1], 8), 0xFF)
-    self.regs[1] = band((old_al + (old_ah * base)), 0xFF)
+    self.regs[1] = band(old_al + (old_ah * base), 0xFF)
     cpu_zsp(self, self.regs[1], 0)
 end
 
--- SALC (undocumented)
+-- SALC
 opcode_map[0xD6] = function(self, opcode)
-    if (band(self.flags, lshift(1, (0))) ~= 0) then
+    if (band(self.flags, 0x01) ~= 0) then
         self.regs[1] = bor(self.regs[1], 0xFF)
     else
         self.regs[1] = band(self.regs[1], 0xFF00)
@@ -1446,37 +1584,44 @@ end
 
 -- XLAT
 opcode_map[0xD7] = function(self, opcode)
-    local addr = band((self.regs[4] + band(self.regs[1], 0xFF)), 0xFFFF)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[(lshift(self.segments[(self.segment_mode or (4))], 4) + (addr))])
+    local addr = band(self.regs[4] + band(self.regs[1], 0xFF), 0xFFFF)
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), self.memory[lshift(self.segments[self.segment_mode or 4], 4) + addr])
 end
 
 -- LOOPNZ r8
 opcode_map[0xE0] = function(self, opcode)
     local offset = to_8(advance_ip(self))
     self.regs[2] = self.regs[2] - 1
-    if self.regs[2] ~= 0 and not (band(self.flags, lshift(1, (6))) ~= 0) then
+
+    if (self.regs[2] ~= 0) and (band(self.flags, 0x40) == 0) then
         self.ip = band((self.ip + offset), 0xFFFF)
     end
 end
+
 -- LOOPZ r8
 opcode_map[0xE1] = function(self, opcode)
     local offset = to_8(advance_ip(self))
     self.regs[2] = self.regs[2] - 1
-    if self.regs[2] ~= 0 and (band(self.flags, lshift(1, (6))) ~= 0) then
+
+    if self.regs[2] ~= 0 and (band(self.flags, 0x40) ~= 0) then
         self.ip = band(self.ip + offset, 0xFFFF)
     end
 end
+
 -- LOOP r8
 opcode_map[0xE2] = function(self, opcode)
     local offset = to_8(advance_ip(self))
     self.regs[2] = self.regs[2] - 1
+
     if self.regs[2] ~= 0 then
         self.ip = band(self.ip + offset, 0xFFFF)
     end
 end
+
 -- JCXZ r8
 opcode_map[0xE3] = function(self, opcode)
     local offset = to_8(advance_ip(self))
+
     if self.regs[2] == 0 then
         self.ip = band(self.ip + offset, 0xFFFF)
     end
@@ -1517,10 +1662,10 @@ end
 
 -- JMP ptr
 opcode_map[0xEA] = function(self, opcode)
-    local newIp = advance_ip16(self)
-    local newCs = advance_ip16(self)
-    self.ip = newIp
-    self.segments[2] = newCs
+    local new_ip = advance_ip16(self)
+    local new_cs = advance_ip16(self)
+    self.ip = new_ip
+    self.segments[2] = new_cs
 end
 
 -- JMP r8
@@ -1553,200 +1698,207 @@ end
 opcode_map[0xF0] = function(self, opcode)
 
 end
-
-opcode_map[0xF1] = function(self, opcode)
-
-end
+opcode_map[0xF1] = opcode_map[0xF0]
 
 -- REPNZ
 opcode_map[0xF2] = function(self, opcode)
-    if not cpu_rep(self, function() return not (band(self.flags, lshift(1, (6))) ~= 0) end) then return false end
+    if not cpu_rep(self, function() return not (band(self.flags, 0x40) ~= 0) end) then
+        return false
+    end
 end
 
 -- REPZ
 opcode_map[0xF3] = function(self, opcode)
-    if not cpu_rep(self, function() return (band(self.flags, lshift(1, (6))) ~= 0) end) then return false end
+    if not cpu_rep(self, function() return (band(self.flags, 0x40) ~= 0) end) then
+        return false
+    end
 end
 
 -- HLT
 opcode_map[0xF4] = function(self, opcode)
     self.halted = true
-    return true
 end
 
 -- CMC
-opcode_map[0xF5] = function(self, opcode) self.flags = bxor(self.flags, lshift(1, (0))) end
+opcode_map[0xF5] = function(self, opcode)
+    self.flags = bxor(self.flags, 0x01)
+end
 
 -- GRP3
-local grp3_table = {}
-grp3_table[0] = function(self, mrm, opcode)
-    mrm = cpu_mrm_copy(mrm)
-    if opcode == 0xF7 then
-        mrm.src = 41
-        mrm.imm = advance_ip16(self)
-    else
-        mrm.src = 40
-        mrm.imm = advance_ip(self)
+local grp3_table = {
+    [0] = function(self, mrm, opcode)
+        mrm = cpu_mrm_copy(mrm)
+        if opcode == 0xF7 then
+            mrm.src = 41
+            mrm.imm = advance_ip16(self)
+        else
+            mrm.src = 40
+            mrm.imm = advance_ip(self)
         end
+
         cpu_test(self, mrm, opcode)
-    end
-    grp3_table[1] = function()
-    logger:error("i8086: Invalid opcode: GRP3/1")
-end
+    end,
+    [1] = function()
+        logger:error("i8086: Invalid opcode: GRP3/1")
+    end,
+    [2] = function(self, mrm, opcode) -- GRP3/NOT
+        if opcode == 0xF7 then
+            cpu_write_rm(self, mrm, mrm.dst, bxor(cpu_read_rm(self, mrm, mrm.dst), 0xFFFF))
+        else
+            cpu_write_rm(self, mrm, mrm.dst, bxor(cpu_read_rm(self, mrm, mrm.dst), 0xFF))
+        end
+    end,
+    [3] = function(self, mrm, opcode) -- -- GRP3/NEG
+        local src = cpu_read_rm(self, mrm, mrm.dst)
+        local result = 0
 
--- GRP3/NOT
-grp3_table[2] = function(self, mrm, opcode)
-    if opcode == 0xF7 then
-        cpu_write_rm(self, mrm, mrm.dst, bxor(cpu_read_rm(self, mrm, mrm.dst), 0xFFFF))
-    else
-        cpu_write_rm(self, mrm, mrm.dst, bxor(cpu_read_rm(self, mrm, mrm.dst), 0xFF))
-    end
-end
+        if opcode == 0xF7 then
+            result = band((bxor(src, 0xFFFF) + 1), 0xFFFF)
+            cpu_write_flag(self, 11, src == 0x8000)
+        else
+            result = band((bxor(src, 0xFF) + 1), 0xFF)
+            cpu_write_flag(self, 11, src == 0x80)
+        end
 
--- GRP3/NEG
-grp3_table[3] = function(self, mrm, opcode)
-    local src = cpu_read_rm(self, mrm, mrm.dst)
-    local result = 0
-    if opcode == 0xF7 then
-        result = band((bxor(src, 0xFFFF) + 1), 0xFFFF)
-        cpu_write_flag(self, 11, src == 0x8000)
-    else
-        result = band((bxor(src, 0xFF) + 1), 0xFF)
-        cpu_write_flag(self, 11, src == 0x80)
-    end
-    cpu_write_rm(self, mrm, mrm.dst, result)
-    cpu_write_flag(self, 0, src ~= 0)
-    cpu_write_flag(self, 4, band(bxor(src, result), 0x10) ~= 0)
-    cpu_zsp(self, result, opcode)
-end
-
-grp3_table[4] = cpu_mul
-grp3_table[5] = cpu_imul
-grp3_table[6] = cpu_div
-grp3_table[7] = cpu_idiv
+        cpu_write_rm(self, mrm, mrm.dst, result)
+        cpu_write_flag(self, 0, src ~= 0)
+        cpu_write_flag(self, 4, band(bxor(src, result), 0x10) ~= 0)
+        cpu_zsp(self, result, opcode)
+    end,
+    [4] = cpu_mul,
+    [5] = cpu_imul,
+    [6] = cpu_div,
+    [7] = cpu_idiv
+}
 
 opcode_map[0xF6] = function(self, opcode)
     local mrm = cpu_mod_rm(self, band(opcode, 0x01))
     local v = band(mrm.src, 0x07)
     if v >= 4 then
         mrm = cpu_mrm_copy(mrm)
-    if opcode == 0xF7 then mrm.src = 0 else mrm.src = 16 end
+        if opcode == 0xF7 then
+            mrm.src = 0
+        else
+            mrm.src = 16
+        end
     end
     grp3_table[v](self, mrm, opcode)
 end
 opcode_map[0xF7] = opcode_map[0xF6]
 
 -- Flag setters
-opcode_map[0xF8] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 0))) end
-opcode_map[0xF9] = function(self, opcode) self.flags = bor(self.flags, lshift(1, (0))) end
-opcode_map[0xFA] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 9))) end
-opcode_map[0xFB] = function(self, opcode) self.flags = bor(self.flags, lshift(1, 9)) end
-opcode_map[0xFC] = function(self, opcode) self.flags = band(self.flags, bxor(self.flags, lshift(1, 10))) end
-opcode_map[0xFD] = function(self, opcode) self.flags = bor(self.flags, lshift(1, (10))) end
+opcode_map[0xF8] = function(self, opcode) self.flags = band(self.flags, bnot(0x01)) end -- CF
+opcode_map[0xF9] = function(self, opcode) self.flags = bor(self.flags, 0x01) end
+
+opcode_map[0xFA] = function(self, opcode) self.flags = band(self.flags, bnot(0x200)) end -- IF
+opcode_map[0xFB] = function(self, opcode) self.flags = bor(self.flags, 0x200) end
+
+opcode_map[0xFC] = function(self, opcode) self.flags = band(self.flags, bnot(0x400)) end -- DF
+opcode_map[0xFD] = function(self, opcode) self.flags = bor(self.flags, 0x400) end
 
 -- GRP4
 opcode_map[0xFE] = function(self, opcode)
     local mrm = cpu_mod_rm(self, 0)
-    local v = band(mrm.src, 0x07)
+    local val = band(mrm.src, 0x07)
 
-    if v == 0 then -- INC
-        local v = band((cpu_read_rm(self, mrm,mrm.dst) + 1), 0xFF)
-        cpu_write_rm(self, mrm,mrm.dst,v)
+    if val == 0 then -- INC
+        local v = band((cpu_read_rm(self, mrm, mrm. dst) + 1), 0xFF)
+        cpu_write_rm(self, mrm, mrm.dst, v)
         cpu_inc(self, v, 0)
-    elseif v == 1 then -- DEC
-        local v = band((cpu_read_rm(self, mrm,mrm.dst) - 1), 0xFF)
-        cpu_write_rm(self, mrm,mrm.dst,v)
+    elseif val == 1 then -- DEC
+        local v = band((cpu_read_rm(self, mrm, mrm.dst) - 1), 0xFF)
+        cpu_write_rm(self, mrm, mrm.dst, v)
         cpu_dec(self, v, 0)
-    else
-
     end
 end
 
 -- GRP5
 opcode_map[0xFF] = function(self, opcode)
     local mrm = cpu_mod_rm(self, 1)
-    local v = band(mrm.src, 0x07)
-    if v == 0 then -- INC
+    local val = band(mrm.src, 0x07)
+
+    if val == 0 then -- INC
         local v = band((cpu_read_rm(self, mrm,mrm.dst) + 1), 0xFFFF)
         cpu_write_rm(self, mrm,mrm.dst,v)
         cpu_inc(self, v, 1)
-    elseif v == 1 then -- DEC
+    elseif val == 1 then -- DEC
         local v = band((cpu_read_rm(self, mrm,mrm.dst) - 1), 0xFFFF)
         cpu_write_rm(self, mrm,mrm.dst,v)
         cpu_dec(self, v, 1)
-    elseif v == 2 then -- CALL near abs
-        local newIp = cpu_read_rm(self, mrm,mrm.dst)
+    elseif val == 2 then -- CALL near abs
+        local new_ip = cpu_read_rm(self, mrm,mrm.dst)
         cpu_push16(self, self.ip)
-        self.ip = newIp
-    elseif v == 3 then -- CALL far abs
+        self.ip = new_ip
+    elseif val == 3 then -- CALL far abs
         local addr = (lshift(self.segments[(self.segment_mode or (cpu_seg_rm(self, mrm,mrm.dst)+1))], 4) + (cpu_addr_rm(self, mrm,mrm.dst)))
-        local newIp = self.memory:r16(addr)
-        local newCs = self.memory:r16(addr+2)
+        local new_ip = self.memory:r16(addr)
+        local new_cs = self.memory:r16(addr+2)
         cpu_push16(self, self.segments[2])
         cpu_push16(self, self.ip)
-        self.ip = newIp
-        self.segments[2] = newCs
-    elseif v == 4 then -- JMP near abs
+        self.ip = new_ip
+        self.segments[2] = new_cs
+    elseif val == 4 then -- JMP near abs
         self.ip = cpu_read_rm(self, mrm,mrm.dst)
-    elseif v == 5 then -- JMP far
+    elseif val == 5 then -- JMP far
         local addr = (lshift(self.segments[(self.segment_mode or (cpu_seg_rm(self, mrm,mrm.dst)+1))], 4) + (cpu_addr_rm(self, mrm,mrm.dst)))
-        local newIp = self.memory:r16(addr)
-        local newCs = self.memory:r16(addr+2)
-        self.ip = newIp
-        self.segments[2] = newCs
-    elseif v == 6 then
+        local new_ip = self.memory:r16(addr)
+        local new_cs = self.memory:r16(addr+2)
+        self.ip = new_ip
+        self.segments[2] = new_cs
+    elseif val == 6 then
         cpu_push16(self, cpu_read_rm(self, mrm,mrm.dst))
-    else
-        --logger:error("i8086: Unknown GRP5 opcode: %02X", v)
     end
 end
 
--- 8087 FPU stubs
+-- 8087 FPU
 opcode_map[0x9B] = function(self, opcode) end
-for i=0xD8,0xDF do
+for i = 0xD8, 0xDF, 1 do
     opcode_map[i] = function(self, opcode) cpu_mod_rm(self, 1) end
 end
 
--- 8086 0xCX opcode aliases
 opcode_map[0xC0] = opcode_map[0xC2]
 opcode_map[0xC1] = opcode_map[0xC3]
 opcode_map[0xC8] = opcode_map[0xCA]
 opcode_map[0xC9] = opcode_map[0xCB]
 
-run_one = function(self, no_interrupting)
-    if self.hasint and not no_interrupting then
+run_one = function(self)
+    if self.hasint then
         local intr = self.intqueue[1]
         if intr ~= nil then
-            if intr >= 256 or (band(self.flags, lshift(1, (9))) ~= 0) then
+            if intr >= 256 or (band(self.flags, 0x0200) ~= 0) then
                 table.remove(self.intqueue, 1)
                 cpu_int(self, band(intr, 0xFF))
-                if #self.intqueue == 0 then self.hasint = false end
+                if #self.intqueue == 0 then
+                    self.hasint = false
+                end
             end
         end
     end
 
     if (band(self.ip, 0xFF00) == 0x1100) and (self.segments[2] == 0xF000) then
-        self.flags = bor(self.flags, lshift(1, (9)))
+        self.flags = bor(self.flags, 0x0200)
         local intr = cpu_int_fake(self, band(self.ip, 0xFF))
+
         if intr ~= -1 then
             self.ip = cpu_pop16(self)
             self.segments[2] = cpu_pop16(self)
             local old_flags = cpu_pop16(self)
-            local old_flag_mask = 0x0200
-            self.flags = bor(band(self.flags, bxor(self.flags, old_flag_mask)), band(old_flags, old_flag_mask))
+            self.flags = bor(band(self.flags, bnot(0x0200)), band(old_flags, 0x0200))
             return true
         else
             return false
         end
     end
 
-    if self.halted then
-        return -1
-    end
+    -- if self.halted then
+    --     return -1
+    -- end
 
     local opcode = advance_ip(self)
-    -- logger:error("i8086: Opcode: %02X", opcode)
     local om = opcode_map[opcode]
+
+    -- logger:debug("i8086: Opcode %02X", opcode)
+
     if om ~= nil then
         local result = om(self, opcode)
         if result ~= nil then
@@ -1767,25 +1919,68 @@ local function reset(self)
     for i = 1, 8, 1 do
         self.regs[i] = 0
     end
-    for i = 1, 6, 1 do
+
+    for i = 1, 8, 1 do
         self.segments[i] = 0
     end
-    self.seg_es = 0
-    self.seg_ss = 2
-    self.seg_cs = 1
-    self.seg_ds = 3
+
+    for i, _ in pairs(self.intqueue) do
+        self.intqueue[i] = nil
+    end
+
     self.ip = 0
-    self.intqueue = {}
+    self.halted = false
+    self.flags = 0
+    self.segment_mode = nil
+    self.hasint = false
+end
+
+local function save(self, stream)
+    stream:write_bytes(bit_converter.uint32_to_bytes(30, "LE"))
+    for i = 1, #self.regs, 1 do
+        stream:write_bytes(bit_converter.uint16_to_bytes(self.regs[i], "BE"))
+    end
+
+    for i = 1, 4, 1 do
+        stream:write_bytes(bit_converter.uint16_to_bytes(self.segments[i], "BE"))
+    end
+
+    stream:write_bytes(bit_converter.uint16_to_bytes(self.ip, "BE")) -- IP
+    stream:write_bytes(bit_converter.uint16_to_bytes(self.flags, "BE")) -- Flags
+    stream:write(self.hasint and 1 or 0) -- Interrupt
+    stream:write(self.segment_mode or 0) -- Segment mode
+end
+
+local function load(self, data)
+    self.regs[1] = bit_converter.bytes_to_uint16({data[1], data[2]}, "BE")
+    self.regs[2] = bit_converter.bytes_to_uint16({data[3], data[4]}, "BE")
+    self.regs[3] = bit_converter.bytes_to_uint16({data[5], data[6]}, "BE")
+    self.regs[4] = bit_converter.bytes_to_uint16({data[7], data[8]}, "BE")
+    self.regs[5] = bit_converter.bytes_to_uint16({data[9], data[10]}, "BE")
+    self.regs[6] = bit_converter.bytes_to_uint16({data[11], data[12]}, "BE")
+    self.regs[7] = bit_converter.bytes_to_uint16({data[13], data[14]}, "BE")
+    self.regs[8] = bit_converter.bytes_to_uint16({data[15], data[16]}, "BE")
+
+    self.segments[1] = bit_converter.bytes_to_uint16({data[17], data[18]}, "BE")
+    self.segments[2] = bit_converter.bytes_to_uint16({data[19], data[20]}, "BE")
+    self.segments[3] = bit_converter.bytes_to_uint16({data[21], data[22]}, "BE")
+    self.segments[4] = bit_converter.bytes_to_uint16({data[23], data[24]}, "BE")
+
+    self.ip = bit_converter.bytes_to_uint16({data[25], data[26]}, "BE") -- IP
+    self.flags = bit_converter.bytes_to_uint16({data[27], data[28]}, "BE") -- Flags
+    self.hasint = data[29] == 1 -- Interrupt
+
+    if data[30] == 0 then
+        self.segment_mode = nil -- Segment mode
+    else
+        self.segment_mode = data[30] -- Segment mode
+    end
 end
 
 function cpu.new(memory)
     local self = {
         regs = {0, 0, 0, 0, 0, 0, 0, 0}, -- AX, CX, DX, BX, SP, BP, SI, DI
-        segments = {0, 0, 0, 0, 0, 0},
-        seg_es = 0,
-        seg_cs = 1,
-        seg_ss = 2,
-        seg_ds = 3,
+        segments = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, -- ES, CS, SS, DS, FS, GS
 
         flags = 0,
         ip = 0,
@@ -1795,9 +1990,7 @@ function cpu.new(memory)
         memory = memory,
         intqueue = {},
         interrupt_handlers = {},
-        reset = reset,
         io_ports = {},
-
         run_one = run_one,
         register_interrupt_handler = register_interrupt_handler,
         emit_interrupt = emit_interrupt,
@@ -1808,13 +2001,11 @@ function cpu.new(memory)
         set_flag = cpu_set_flag,
         clear_flag = cpu_clear_flag,
         seg = seg,
-    }
-
-    self.rm_seg_t = {
-        self.seg_ds, self.seg_ds,
-        self.seg_ss, self.seg_ss,
-        self.seg_ds, self.seg_ds,
-        self.seg_ss, self.seg_ds
+        out_port = out_port,
+        in_port = in_port,
+        reset = reset,
+        save = save,
+        load = load
     }
 
     return self

@@ -12,7 +12,11 @@ local default = {
     create_page_item = false,
     font_scale = 1.0,
     check_for_updates = false,
-    enable_screen_3d = true
+    enable_screen_3d = true,
+    graphics_screen_renderer_delay = 0.5,
+    save_virtual_machine_state = true,
+    draw_text_background = false,
+    enable_post_card = false
 }
 
 function config.save()
@@ -61,6 +65,12 @@ function config.load()
             end
         end
     })
+end
+
+function config.reset()
+    for key, value in pairs(default) do
+        config[key] = value
+    end
 end
 
 return config

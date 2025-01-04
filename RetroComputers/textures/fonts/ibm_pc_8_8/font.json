@@ -4,6 +4,6 @@
     "glyph_width": 8,
     "glyph_height": 8,
     "glyphs_count": 255,
-    "atlas_height": 128,
-    "atlas_width": 128
+    "atlas_height": 64,
+    "atlas_width": 256
 }

@@ -34,6 +34,23 @@ local function create_channel(self, channel)
 	}
 end
 
+local function reset_channel(self, channel_num)
+	local channel = self.channels[channel_num]
+    channel.mode = 0
+    channel.read_mode = 0
+    channel.write_mode = 0
+    channel.reload = 0xFFFF
+    channel.bcd = false
+    channel.count = 0
+    channel.latch = false
+    channel.latched = 0
+    channel.gate = false
+    channel.state = 0
+    channel.incompleted = false
+    channel.newcount = false
+    channel.lcounter = 0
+end
+
 local function decrease_count(channel)
     -- if channel.bsd then
     --     -- TODO
@@ -61,7 +78,7 @@ local function channel_update_count(channel)
         channel.count = 0x10000
     end
 
-    if band(channel.reload, 1) >= 1 then
+    if band(channel.count, 1) == 1 then
         channel.newcount = true
     else
         channel.newcount = false
@@ -132,6 +149,7 @@ local function channel_update(self, channel_num)
                         ch.newcount = false
                     end
                 end
+                return
             elseif ch.state == 3 then
                 if ch.gate == false then
                     return
@@ -148,9 +166,10 @@ local function channel_update(self, channel_num)
                         ch.newcount = false
                     end
                 end
+                return
             end
         elseif (ch.mode == 4) or (ch.mode == 5) then -- Hardware Triggered Strobe / Software Triggered Strobe
-            if ch.gate and (ch.mode == 5) then
+            if ch.gate or (ch.mode == 5) then
                 if (ch.state == 0) or (ch.state == 6) then
                     decrease_count(ch)
                 elseif ch.state == 2 then
@@ -166,20 +185,16 @@ local function channel_update(self, channel_num)
             end
         end
     end
-
-    -- if channel_num == 0 then
-    --     self.cpu:emit_interrupt(0x08, false)
-    -- end
 end
 
 local function pit_tick(self)
-    for _ = 1, 300, 1 do
+    for _ = 1, 400, 1 do
         for i = 0, 2, 1 do
             local channel = self.channels[i]
             if channel.latch then
                 channel_update_state(channel)
                 channel.latch = false
-            elseif (channel.latch == false) then
+            else
                 channel_update(self, i)
             end
         end
@@ -224,7 +239,7 @@ local function port_init(self, channel)
                 ch.latched = ch.latched - 1
                 return ret
             else
-                local count  = 0
+                local count = 0
                 if ch.state == 1 then
                     count = ch.reload
                 else
@@ -239,7 +254,7 @@ local function port_init(self, channel)
                     return band(rshift(count, 8), 0xFF)
                 elseif (ch.read_mode == 3) or (ch.read_mode == 0x83) then
                     self.access_lohi = not self.access_lohi
-                    if band(ch.wm, 0x80) == 0x80 then
+                    if band(ch.write_mode, 0x80) == 0x80 then
                         return bnot(band(count, 0xFF))
                     else
                         if band(ch.read_mode, 0x80) == 0x80 then
@@ -282,7 +297,7 @@ local function port_43(self)
                         channel.lcounter = band(count, 0xFFFF)
                         channel.latched = 2
                     end
-                    -- logger:debug("i8253: Channel %d: Access mode = %d, Latched Counter = %d", channel_num, channel.read_mode, channel.lcounter)
+                    -- logger:debug("i8253: Channel %d: Access mode = %03d, Latched Counter = %d", channel_num, channel.read_mode, channel.lcounter)
                 else
                     channel.read_mode = band(rshift(val, 4), 3)
                     channel.write_mode = channel.read_mode
@@ -292,7 +307,7 @@ local function port_43(self)
                     if channel.latched > 0 then
                         channel.lcounter = channel.lcounter - 1
                     end
-                    -- logger:debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s", channel_num, channel.read_mode, channel.mode, channel.bsd)
+                    logger:debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s", channel_num, channel.read_mode, channel.mode, channel.bsd)
                 end
             end
         else
@@ -301,13 +316,23 @@ local function port_43(self)
     end
 end
 
+local function reset(self)
+    reset_channel(self, 0)
+    reset_channel(self, 1)
+    reset_channel(self, 2)
+
+    self.channels[0].gate = true
+    self.channels[1].gate = true
+    self.channels[2].gate = false
+end
+
 local pit = {}
 
 function pit.new(cpu)
     local self = {
-        cpu = cpu,
-        update = pit_tick,
         channels = {},
+        update = pit_tick,
+        reset = reset
     }
 
     create_channel(self, 0) -- IRQ0

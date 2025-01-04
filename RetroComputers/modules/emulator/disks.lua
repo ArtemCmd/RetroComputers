@@ -4,6 +4,7 @@ local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshif
 
 local function init_disk(self, cpu, drive)
 	drive.inserted = true
+
 	if drive.size == 0 then
 		drive.inserted = false
 		drive.sector_size = 0
@@ -87,6 +88,7 @@ local function init_disk(self, cpu, drive)
             return
 		end
 	end
+
 	logger:info("Disks: Added new drive: CHS: = %d,%d,%d, Sector size = %d, ID = %x, Size = %d, Readonly = %s", drive.cylinders, drive.heads, drive.sectors, drive.sector_size, drive.id, drive.size, drive.readonly)
 
 	-- Сonfigure table
@@ -133,6 +135,7 @@ end
 
 local function eject_drive(self, id)
     local drive = self.drives[id]
+
     if drive then
         drive.handler:flush()
         drive.inserted = false
@@ -147,6 +150,7 @@ local function insert_disk(self, cpu, path, readonly, id)
         if self.drives[id] then
             local drive = self.drives[id]
             init_disk(self, cpu, drive)
+
             if drive.id >= 0x80 then
                 cpu.memory[0x475] = cpu.memory[0x475] + 1
             end
@@ -168,6 +172,7 @@ local function insert_disk(self, cpu, path, readonly, id)
 
             init_disk(self, cpu, drive)
             self.drives[id] = drive
+
             if drive.id >= 0x80 then
                 cpu.memory[0x475] = cpu.memory[0x475] + 1
             end
@@ -181,8 +186,13 @@ local function ret_status(self, cpu, v)
 	if v ~= nil then
 		self.last_status = band(v, 0xFF)
 	end
+
 	cpu.regs[1] = bor(band(cpu.regs[1], 0xFF), lshift(self.last_status, 8))
 	cpu:write_flag(0, self.last_status ~= 0)
+end
+
+local function play_sound()
+    audio.play_sound_2d("computer/floppy_access_" .. math.random(1, 3), 1.0, 1.0)
 end
 
 local function int_13(self)
@@ -191,9 +201,11 @@ local function int_13(self)
         if ah == 0x00 then -- Reset Disk Drives
             local drive_id = band(cpu.regs[3], 0xFF)
             local drive = self.drives[drive_id]
+
             if drive then
                 drive.handler:set_position(0)
             end
+
             ret_status(self, cpu, 0)
             return true
         elseif ah == 0x01 then -- Check Drive Status
@@ -207,11 +219,12 @@ local function int_13(self)
             local cylinder = rshift(cx, 8)
             local head = rshift(dx, 8)
             local drive_id = band(dx, 0xFF)
+            local drive = self.drives[drive_id]
+
             if drive_id >= 0x80 then
                 cylinder = bor(cylinder, lshift(band(cx, 0xC0), 2))
             end
 
-            local drive = self.drives[drive_id]
             if drive then
                 if not drive.inserted then
                     ret_status(self, cpu, 0x31)
@@ -229,12 +242,16 @@ local function int_13(self)
                 drive.handler:set_position(pos)
                 local count = al * drive.sector_size
                 local data = drive.handler:read(count)
-                for i = 0, count - 1 do
-                    cpu.memory[cpu:seg(cpu.seg_es, bx + i)] = data[i + 1] or 0x00
+
+                for i = 0, count - 1, 1 do
+                    cpu.memory[cpu:seg(0, bx + i)] = data[i + 1]
                 end
                 -- logger:debug("Disks: Read bytes from drive %02X at sector:%d head:%d cylinder:%d", drive.id, sector, head, cylinder)
                 ret_status(self, cpu, 0)
+
+                play_sound()
             else
+                logger:warning("Disks: Interrupt 13h, AH = 0x02: Drive %d not exists", drive_id)
                 ret_status(self, cpu, 1)
             end
             return true
@@ -246,10 +263,11 @@ local function int_13(self)
             local cylinder = rshift(cx, 8)
             local head = rshift(dx, 8)
             local drive_id = band(dx, 0xFF)
+            local drive = self.drives[drive_id]
+
             if drive_id >= 0x80 then
                 cylinder = bor(cylinder, lshift(band(cx, 0xC0), 2))
             end
-            local drive = self.drives[drive_id]
 
             if drive then
                 if not drive.inserted then
@@ -269,23 +287,26 @@ local function int_13(self)
                 end
 
                 local pos = ((cylinder * drive.heads + head) * drive.sectors + (sector - 1)) * drive.sector_size
+                local count = al * drive.sector_size
+
                 cpu.regs[1] = al -- AH = 0 (OK), AL = sectors transferred
                 drive.handler:set_position(pos)
-                local count = al * drive.sector_size
+
                 for i = 0, count - 1 do
-                    drive.handler:write(cpu.memory[cpu:seg(cpu.seg_es, bx + i)])
+                    drive.handler:write(cpu.memory[cpu:seg(0, bx + i)])
                 end
                 -- logger:debug("Disks: Write %s bytes to drive %02X sector:%s head:%s cylinder:%s", count, drive.id, sector, head, cylinder)
                 if not drive.edited then
                     drive.edited = true
                 end
+
                 ret_status(self, cpu, 0)
-                return true
-            else
-                return true
+
+                play_sound()
             end
+            return true
         elseif ah == 0x04 then -- Verify Sectors
-            local drive_id = band(cpu.regs[3], 0xFF)
+            -- local drive_id = band(cpu.regs[3], 0xFF)
             -- logger:debug("Disks: Drive %02X: Verify sectors", drive_id)
             ret_status(self, cpu, 0)
             return true
@@ -300,22 +321,27 @@ local function int_13(self)
             else
                 local maxc = drive.cylinders - 1
                 local drives_count = cpu.memory[0x475]
+
                 if drive.floppy then
                     drives_count = band(rshift(cpu.memory[0x410], 6), 3) + 1
                 end
+
                 cpu.regs[2] = bor(bor(lshift(band(maxc, 0xFF), 8), band(drive.sectors, 0x3F)), rshift(band(maxc, 0x300), 2)) -- CX = cylinder number | sector number
                 cpu.regs[3] = bor(lshift((drive.heads - 1), 8), drives_count)
+
                 if drive.floppy then
                     if drive.sectors == 18 then
                         cpu.regs[4] = bor(band(cpu.regs[4], 0xFF00), 4)
                     else
                         cpu.regs[4] = bor(band(cpu.regs[4], 0xFF00), 3)
                     end
+
                     cpu.regs[8] = 2000 + (drive.id * 16)
-                    cpu.segments[cpu.seg_es+1] = 0xF000
+                    cpu.segments[1] = 0xF000
                 else
                     cpu.regs[4] = band(cpu.regs[4], 0xFF00)
                 end
+
                 ret_status(self, cpu, 0)
             end
             return true
@@ -342,9 +368,17 @@ local function int_13(self)
         elseif ah == 0x18 then -- Set Floppy Drive Media Type
             local drive = band(cpu.regs[3], 0xFF)
             local code = 0x80
-            if self.drives[drive] then code = 0 end
+
+            if self.drives[drive] then
+                code = 0
+            end
+
             cpu:clear_flag(0)
             cpu.regs[1] = bor(lshift(code, 8), band(cpu.regs[1], 0xFF))
+            return true
+        elseif ah == 0x0D then
+            ret_status(self, cpu, 0)
+            cpu:clear_flag(0)
             return true
         else
             cpu:set_flag(0)
@@ -355,13 +389,16 @@ end
 
 local function disk_boot(self, cpu, id)
 	local drive = self.drives[id]
+
     if drive then
         logger:debug("Disks: Booting from drive %02X", id)
         drive.handler:set_position(0)
         local bootsector =  drive.handler:read(512)
-        for i=0,511 do
-            cpu.memory[0x7c00 + i] = bootsector[i+1]
+
+        for i = 0, 512, 1 do
+            cpu.memory[0x7C00 + i] = bootsector[i + 1]
         end
+
         cpu:set_ip(0x0000, 0x7C00)
         cpu.regs[3] = bor(0x0000, id)
         cpu.regs[5] = 0x8000
@@ -370,11 +407,11 @@ local function disk_boot(self, cpu, id)
     end
 end
 
-local disks = {}
-
 local function reset(self, memory)
     memory[0x475] = 0
 end
+
+local disks = {}
 
 function disks.new(cpu)
     local self = {
