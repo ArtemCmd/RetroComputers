@@ -1,43 +1,69 @@
 local logger = require("retro_computers:logger")
+local config = require("retro_computers:config")
+local filesystem = require("retro_computers:emulator/filesystem")
 local drive_manager = require("retro_computers:emulator/drive_manager")
 local vmmanager = require("retro_computers:emulator/vmmanager")
-local bit_converter = require("core:bit_converter")
+local hdd_hdf = require("retro_computers:emulator/hardware/disk/hdd_hdf")
+local cpu = require("retro_computers:emulator/hardware/cpu/i8086")
+local pit = require("retro_computers:emulator/hardware/i8253")
+local pic = require("retro_computers:emulator/hardware/i8259")
+local keyboard = require("retro_computers:emulator/hardware/keyboard/keyboard_xt")
+local dma = require("retro_computers:emulator/hardware/i8237")
+local lpt = require("retro_computers:emulator/hardware/lpt")
+local display = require("retro_computers:emulator/display")
+local postcard = require("retro_computers:emulator/hardware/other/postcard")
+local fdc = require("retro_computers:emulator/hardware/floppy/fdc")
+local pc_speaker = require("retro_computers:emulator/hardware/sound/pc_speaker")
+local hdc = require("retro_computers:emulator/hardware/disk/st506")
+local cga = require("retro_computers:emulator/hardware/video/cga")
+local hercules = require("retro_computers:emulator/hardware/video/hercules")
+local mda = require("retro_computers:emulator/hardware/video/mda")
 
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
 
-local RAM = {}
+local videocards = {
+    ["mda"] = mda,
+    ["hercules"] = hercules,
+    ["cga"] = cga
+}
 
+local RAM = {}
 function RAM.new(machine)
     local self = {}
-    local ram_640k = {}
+    local ram_base = {}
     local ram_rom = {}
+    local ram_hdc = {}
 
     setmetatable(self, {
         __index = function(t, key)
-            if (key < 0xA0000) then
-                return ram_640k[key + 1] or 0
-            elseif (key >= machine.components.videocard.start_addr) and (key <= machine.components.videocard.end_addr) then
+            if key < 0xA0000 then
+                return ram_base[key] or 0x00
+            elseif (key >= machine.components.videocard.vram_start) and (key <= machine.components.videocard.vram_end) then
                 return machine.components.videocard:vram_read(key)
-            elseif (key >= 0xF0000 and key < 0x100000) then
-                return ram_rom[band(key, 0xFFFFF) - 0xF0000] or 0x00
-            else
-                return 0x00
+            elseif (key >= 0xC8000) and (key < 0xCA000) then
+                return ram_hdc[key - 0xC8000]
+            elseif (key >= 0xF0000) and (key < 0x100000) then
+                return ram_rom[band(key, 0x0FFFF)]
             end
+
+            return 0x00
         end,
         __newindex = function(t, key, value)
-            if (key < 0xA0000) then
-                ram_640k[key + 1] = value
-            elseif (key >= machine.components.videocard.start_addr) and (key <= machine.components.videocard.end_addr) then
+            if key < 0xA0000 then
+                ram_base[key] = value
+            elseif (key >= machine.components.videocard.vram_start) and (key <= machine.components.videocard.vram_end) then
                 machine.components.videocard:vram_write(key, value)
-            elseif (key >= 0xF0000 and key < 0x100000) then
-                ram_rom[band(key, 0xFFFFF) - 0xF0000] = value
+            elseif (key >= 0xC8000) and (key < 0xCA000) then
+                ram_hdc[key - 0xC8000] = value
+            elseif (key >= 0xF0000) and (key < 0x100000) then
+                ram_rom[band(key, 0x0FFFF)] = value
             end
         end
     })
 
     rawset(self, "r16", function(ram, key)
         if key < 0x9FFFF then
-            return bor((ram_640k[key + 1] or 0), lshift((ram_640k[key + 2] or 0), 8))
+            return bor(ram_base[key], lshift(ram_base[key + 1], 8))
         else
             return bor(ram[key], lshift(ram[key + 1], 8))
         end
@@ -45,8 +71,8 @@ function RAM.new(machine)
 
     rawset(self, "w16", function(ram, key, value)
         if key < 0x9FFFF then
-            ram_640k[key + 1] = band(value, 0xFF)
-            ram_640k[key + 2] = rshift(value, 8)
+            ram_base[key] = band(value, 0xFF)
+            ram_base[key + 1] = rshift(value, 8)
         else
             ram[key] = band(value, 0xFF)
             ram[key + 1] = rshift(value, 8)
@@ -70,14 +96,15 @@ function RAM.new(machine)
         end
     end)
 
-    rawset(self, "save", function(mem, stream)
-        stream:write_bytes(bit_converter.uint32_to_bytes(1048576)) -- Chunk lenght
+    rawset(self, "save_state", function(mem, stream)
+        stream:write_uint32(1048576)
+
         for i = 0, 1048575, 1 do
             stream:write(self[i] or 0)
         end
     end)
 
-    rawset(self, "load", function(mem, data)
+    rawset(self, "load_state", function(mem, data)
         for i = 0, 1048575, 1 do
             mem[i] = data[i + 1]
         end
@@ -86,109 +113,103 @@ function RAM.new(machine)
     return self
 end
 
-local cpu = require("retro_computers:emulator/hardware/processors/i8086")
-local pit = require("retro_computers:emulator/hardware/i8253")
-local pic = require("retro_computers:emulator/hardware/i8259")
-local cga = require("retro_computers:emulator/hardware/videocards/cga")
-local disks = require("retro_computers:emulator/disks")
-local keyboard = require("retro_computers:emulator/hardware/keyboards/keyboard_xt")
-local serial = require("retro_computers:emulator/hardware/serial")
-local dma = require("retro_computers:emulator/hardware/i8237")
--- local fdc = require("retro_computers:emulator/hardware/floppy/fdc")
-local printer = require("retro_computers:emulator/printer/dave_printer")
-local lpt = require("retro_computers:emulator/hardware/lpt")
-local display = require("retro_computers:emulator/display")
-local postcard = require("retro_computers:emulator/hardware/other/postcard")
-local dave_bios = require("retro_computers:emulator/dave_bios")
-
-local machine = {}
-
 local function insert_floppy(self, floppy, id)
     if self.enabled then
-        self.components.disks:insert_disk(self.components.cpu, floppy.filename, floppy.readonly, id)
+        self.components.fdc:insert_drive(id, floppy.path, floppy.readonly)
     end
-    self.floppy_to_load[id] = floppy
+
+    self.floppy[id] = floppy
 end
 
 local function eject_floppy(self, id)
-    -- logger:debug("IBM XT: Eject floppy %d", id)
-    if self.components.disks.drives[id] then
-        self.components.disks:eject_drive(id)
+    self.components.fdc:eject_drive(id)
+    self.floppy[id] = nil
+end
+
+local function get_id(self)
+    return self.id
+end
+
+local function call_event(self, id)
+    if self.handler then
+        self.handler(self, id)
     end
-    self.floppy_to_load[id] = nil
 end
 
 local function start(self)
     if not self.enabled then
-        logger:info("IBM XT: Starting")
-
-        self.speaker_id = audio.play_sound_2d("computer/running", 1.0, 1.0, nil, true)
-
+        logger.info("IBM XT: Starting")
         self:reset()
 
-        -- BIOS TEST
-        -- bios-xt.bin 0xFC000, 0xFE000
-        -- local rom = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/bios-xt.bin")
-        -- -- local rom2 = file.read_bytes("retro_computers:modules/emulator/roms/ibmxt/5000027.u19")
-        -- for i = 0, #rom - 1, 1 do
-        --     self.components.cpu.memory[0xFC000 + i] = rom[i + 1]
-        -- end
-        -- -- for i = 0, #rom - 1, 1 do
-        -- --     self.components.cpu.memory[0xF0000 + i] = rom2[i + 1]
-        -- -- end
-        -- self.components.cpu:set_ip(0xFFFF, 0)
+        -- Setup HDD
+        local hdd_folder_path = vmmanager.get_machine_path(self.id) .. "disks/"
+        local hdd_path = hdd_folder_path ..  "hdd.hdf"
 
-        self.components.cpu.flags = 0x0202
-        self.bios:start()
+        if not file.exists(hdd_folder_path) then
+            file.mkdir(hdd_folder_path)
+        end
 
-        local hdd_path = vmmanager.get_machine_path(self.id) .. "disks/hdd.hdf"
         if not file.exists(hdd_path) then
-            local hdd_folder_path = vmmanager.get_machine_path(self.id) .. "disks/"
-            if not file.exists(hdd_folder_path) then
-                file.mkdir(hdd_folder_path)
+            hdd_hdf.new(hdd_path, 615, 4, 17, 512)
+        end
+
+        -- Load disks
+        for id, floppy in pairs(self.floppy) do
+            self.components.fdc:insert_drive(id, floppy.path, floppy.readonly)
+        end
+
+        self.components.hdc:insert_drive(0, hdd_path)
+
+        -- Load BIOS extensions
+        self.components.hdc:initialize()
+
+        -- Load BIOS
+        -- 0xFC000, 0xFE000, 0xF8000, 0xF0000
+        local roms = config.ibm_xt.rom
+
+        for i = 1, #roms, 1 do
+            local rom = roms[i]
+            local path = "retro_computers:modules/emulator/roms/ibmxt/" .. rom.filename
+
+            if file.exists(path) then
+                local stream = filesystem.open(path, false)
+
+                if stream then
+                    local bytes = stream:get_buffer()
+
+                    for j = 0, #bytes - 1, 1 do
+                        self.components.memory[rom.addr + j] = bytes[j + 1]
+                    end
+                end
+            else
+                logger.error("IBM XT: ROM \"%S\" not found", rom.filename)
             end
-            drive_manager.create_hard_disk(hdd_path, 306, 4, 17, 512, "hdf")
         end
 
-        self.components.disks:insert_disk(self.components.cpu, hdd_path, false, 0x80)
-
-        for id, floppy in pairs(self.floppy_to_load) do
-            self.components.disks:insert_disk(self.components.cpu, floppy.filename, floppy.readonly, id)
-        end
-
-        if self.floppy_to_load[0] then
-            self.components.disks:boot_drive(self.components.cpu, 0x00)
-        else
-            self.components.disks:boot_drive(self.components.cpu, 0x80)
-        end
-
+        self.components.cpu:set_ip(0xFFFF, 0x0000)
         self.enabled = true
-    end
-end
 
-local function step(self)
-    self.clock = os.clock()
-    self.components.keyboard:update()
-    self.components.videocard:update()
-    self.components.pit:update()
-end
-
-local function handle_ibm(self)
-    self.execute = self.components.cpu:run_one(false)
-    if (self.execute == -1) and (os.clock() - self.clock) >= 0.05 then
-        self.execute = true
-        step(self)
-    elseif (band(self.opcode, 0x1FF) == 0) and (os.clock() - self.clock) >= 0.05 then
-        self.opcode = 0
-        step(self)
+        call_event(self, 0)
     end
-    self.opcode = self.opcode + 1
 end
 
 local function update(self)
     if self.enabled then
-        for _ = 1, 5000 do
-            handle_ibm(self)
+        local components = self.components
+
+        for _ = 1, 3000, 1 do
+            components.cpu:step()
+            components.pit:update()
+            components.pic:update()
+        end
+
+        components.keyboard:update()
+        components.fdc:update()
+        components.hdc:update()
+        components.videocard:update()
+
+        if components.display3d then
+            components.display3d:update()
         end
     end
 end
@@ -196,85 +217,87 @@ end
 local function shutdown(self)
     if self.enabled then
         self.enabled = false
-
-        audio.stop(self.speaker_id)
         self:reset()
+        call_event(self, 1)
     end
 end
 
 local function save(self)
-    local machine_info = {
-        loaded_drives = {}
+    local data = {
+        drives = {}
     }
 
-    for id, drive in pairs(self.floppy_to_load) do
-        machine_info.loaded_drives[#machine_info.loaded_drives+1] = {drive.name, id}
+    for id, drive in pairs(self.floppy) do
+        table.insert(data.drives, 1, {drive.name, id})
     end
-    file.write(vmmanager.get_machine_path(self.id) .. "machine.json", json.tostring(machine_info, false))
 
-    local drives = self.components.disks.drives
-    for _, drive in pairs(drives) do
-        if drive.edited then
-            drive.handler:flush()
+    file.write(vmmanager.get_machine_path(self.id) .. "machine.json", json.tostring(data, false))
+
+    for _, component in pairs(self.components) do
+        if rawget(component, "save") then
+            component:save()
         end
     end
 end
 
 local function reset(self)
-    self.components.memory:reset()
-    self.components.display:reset()
-    self.components.cpu:reset()
-    self.components.videocard:reset()
-    self.components.videocard:update()
-    self.components.keyboard:reset()
-    self.components.disks:reset(self.components.memory)
-    self.components.serial:reset()
-    self.components.lpt:reset()
+    for _, component in pairs(self.components) do
+        if component.reset then
+            component:reset()
+        end
+    end
+end
+
+local function get_component(self, name)
+    return self.components[name]
+end
+
+local function set_component(self, name, component)
+    self.components[name] = component
+end
+
+local function get_event_handler(self)
+    return self.handler
+end
+
+local function set_event_handler(self, handler)
+    self.handler = handler
 end
 
 local function on_load_state(self)
-    local hdd_path = vmmanager.get_machine_path(self.id) .. "disks/hdd.hdf"
-
-    self.components.disks:insert_disk(self.components.cpu, hdd_path, false, 0x80)
-
-    for id, floppy in pairs(self.floppy_to_load) do
-        self.components.disks:insert_disk(self.components.cpu, floppy.filename, floppy.readonly, id)
-    end
-
-    self.speaker_id = audio.play_sound_2d("computer/running", 1.0, 1.0, nil, true)
+    call_event(self, 2)
 end
 
 local function on_machine_delete(self)
-    audio.stop(self.speaker_id)
-
-    for id, _ in pairs(self.floppy_to_load) do
-        self.floppy_to_load[id] = nil
-    end
+    call_event(self, 3)
 end
 
-function machine.new(id)
-    local machine_path =  "world:data/retro_computers/machines/" .. id
-    if file.exists("world:data") then
-        if not file.exists(machine_path .. id) then
-            file.mkdir(machine_path .. id)
-        end
-    end
+local machine = {
+    EVENTS = {
+        START = 0,
+        STOP = 1,
+        LOAD_STATE = 2,
+        DELETE = 3
+    }
+}
 
+function machine.new(id)
     local self = {
+        components = {},
+        floppy = {},
         id = id,
-        floppy_to_load = {},
         enabled = false,
         is_focused = false,
-        clock = os.clock(),
-        opcode = 0,
-        speaker_id = -1,
-        execute = true,
-        components = {},
+        get_id = get_id,
         start = start,
-        update = update,
         shutdown = shutdown,
+        update = update,
         save = save,
+        get_event_handler = get_event_handler,
+        set_event_handler = set_event_handler,
         reset = reset,
+        get_component = get_component,
+        set_component = set_component,
         insert_floppy = insert_floppy,
         eject_floppy = eject_floppy,
         on_load_state = on_load_state,
@@ -285,27 +308,60 @@ function machine.new(id)
     self.components.cpu = cpu.new(self.components.memory)
     self.components.pic = pic.new(self.components.cpu)
     self.components.pit = pit.new(self.components.cpu)
-    self.components.keyboard = keyboard.new(self)
     self.components.display = display.new(self)
-    self.components.videocard = cga.new(self.components.cpu, self.components.display)
-    self.components.dma = dma.new(self.components.cpu)
-    self.components.serial = serial.new(self.components.cpu)
-    self.components.disks = disks.new(self.components.cpu)
+
+    local videocard = videocards[config.ibm_xt.video]
+
+    if not videocard then
+        videocard = cga
+        logger.error("IBM XT: Unknown videocard \"%s\"", config.ibm_xt.video)
+    end
+
+    self.components.videocard = videocard.new(self.components.cpu, self.components.display)
+
+    self.components.dma = dma.new(self.components.cpu, self.components.memory)
     self.components.lpt = lpt.new(self.components.cpu)
-    -- self.components.fdc = fdc.new(self.components.cpu)
-    self.components.postcard = postcard.new(self.components.cpu)
-    self.bios = dave_bios.new(self.components.cpu, self.components.memory)
-    printer.new(self.components.lpt)
-    setmetatable(self, {})
+    self.components.fdc = fdc.new(self.components.cpu, self.components.pic, self.components.dma)
+    self.components.hdc = hdc.new(self.components.cpu, self.components.memory, self.components.pic, self.components.dma)
+    self.components.pc_speaker = pc_speaker.new(self.components.pit, self.components.keyboard)
+    self.components.keyboard = keyboard.new(self, self.components.cpu, self.components.pic, self.components.pit, self.components.pc_speaker, self.components.videocard, 2)
+    self.components.cpu.pic = self.components.pic
+
+    if config.post_card then
+        self.components.postcard = postcard.new(self.components.cpu)
+    end
+
+    -- IRQ 0 (Interrupt 08h)
+    self.components.pit:set_channel_handler(0, function(channel, set, old_set)
+        if set and (not old_set) then
+            self.components.pic:request_interrupt(1, true)
+        end
+
+        if not set then
+            self.components.pic:request_interrupt(1, false)
+        end
+    end)
+
+    -- DMA Refresh
+    -- self.components.pit:set_channel_handler(1, function(channel, set, old_set)
+    --     if set and (not old_set) then
+    --         self.components.dma:channel_read(0)
+    --     end
+    -- end)
 
     local path = vmmanager.get_machine_path(self.id) .. "machine.json"
+
     if file.exists(path) then
-        local saved = json.parse(file.read(path))
-        saved.loaded_drives = saved.loaded_drives or {}
-        for _, floppy_data in pairs(saved.loaded_drives) do
-            local floppy = drive_manager.get_floppy(floppy_data[1])
-            if floppy then
-                insert_floppy(self, floppy, floppy_data[2])
+        local data = json.parse(file.read(path))
+
+        if data.drives then
+            for i = 1, #data.drives, 1 do
+                local floppy_data = data.drives[i]
+                local floppy = drive_manager.get_floppy(floppy_data[1])
+
+                if floppy then
+                    insert_floppy(self, floppy, floppy_data[2])
+                end
             end
         end
     end

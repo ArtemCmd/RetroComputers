@@ -1,10 +1,4 @@
 {
-    "rotation": "pane",
-    "light-passing": true,
-    "sky-light-passing": true,
-    "caption": "IBM PC/XT",
-    "ui-layout": "retro_computers:ibm_xt_inventory",
-    "inventory-size": 2,
     "model": "custom",
     "model-primitives": {
         "aabbs": [
@@ -16,5 +10,11 @@
             [0.2, 0.36, 0.05, 0.6, 0.5, 0.6, "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor_front"]
         ]
     },
-    "hitbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+    "rotation": "pane",
+    "light-passing": true,
+    "sky-light-passing": true,
+    "hitbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+    "ui-layout": "retro_computers:ibm_xt_inventory",
+    "inventory-size": 2,
+    "caption": "IBM PC/XT"
 }

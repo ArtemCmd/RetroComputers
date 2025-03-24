@@ -1,8 +1,9 @@
-<container size='640,630'>
-    <container id='screen' size='640,600' color='#000000FF'>
-        <container id='screen_text' size='640, 600' color='#000000FF'/>
-        <image id='screen_graphics' size='641, 201' visible='false' src='gui/screen'/>
+<container size='640, 230'>
+    <container id='screen' size='640, 200' color='#000000FF'>
+        <container id='screen_text' size='640, 200' color='#000000FF'/>
+        <canvas id='screen_graphics' size='640, 200' visible='false'/>
         <image id='cursor' pos='100, 100' size='8, 2' color='#555555' visible='false'/>
+        <container id='screen_animation' size='640, 200' color='#000000FF'/>
     </container>
 
     <container id='control_panel' pos='0, 600' size='545,30' color='#222121'>

@@ -1,5 +1,8 @@
-{
-    "name": "ELKS",
-    "filename": "floppy.img",
-    "readonly": false
-}
+[
+    {
+        "caption": "ELKS",
+        "name": "ELKS",
+        "filename": "floppy.img",
+        "readonly": false
+    }
+]

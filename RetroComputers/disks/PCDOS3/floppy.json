@@ -1,0 +1,14 @@
+[
+    {
+        "caption": "PC-DOS 3.30 (1)",
+        "name": "pcdos_330_1",
+        "filename": "Ibm330_1.img",
+        "readonly": true
+    },
+    {
+        "caption": "PC-DOS 3.30 (2)",
+        "name": "pcdos_330_2",
+        "filename": "Ibm330_2.img",
+        "readonly": true
+    }
+]

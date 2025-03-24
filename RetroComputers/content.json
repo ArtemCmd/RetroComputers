@@ -1,12 +1,12 @@
 {
-  "blocks": [
-    "ibm_xt"
-  ],
+  "entities": [],
   "items": [
     "floppy_ELKS",
-    "floppy_Tests",
-    "floppy_PC DOS 3.20 1",
-    "floppy_PC DOS 3.20 2"
+    "floppy_empty",
+    "floppy_pcdos_330_1",
+    "floppy_pcdos_330_2"
   ],
-  "entities": []
+  "blocks": [
+    "ibm_xt"
+  ]
 }

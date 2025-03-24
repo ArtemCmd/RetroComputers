@@ -10,6 +10,7 @@ local initilized = false
 local is_pressed = input.is_pressed
 local machine = nil
 local left_shift = false
+
 -- Char, Key name
 local shift_chars = {
     ['Q'] = 'q',
@@ -56,6 +57,7 @@ local shift_chars = {
     ['*'] = '8',
     ['('] = '9',
     [')'] = '0',
+    ['_'] = '-'
 }
 
 local char_to_keyname = {
@@ -111,6 +113,7 @@ end
 function switch_key(key, button_id)
     local button = document[button_id]
     local old_color = button.color
+
     button.color = button.hoverColor
     button.hoverColor = old_color
 
@@ -124,6 +127,7 @@ end
 function send_text()
     if machine then
         local clipboard = document.clipboard
+
         if #clipboard.text > 0 then
             for i = 1, #clipboard.text, 1 do
                 local char = clipboard.text:sub(i, i)
@@ -139,6 +143,7 @@ function send_text()
                 end
             end
         end
+
         document.clipboard.text = ""
     end
 end
@@ -146,6 +151,7 @@ end
 function on_open()
     local keyboard = document.root
     local viewport = gui.get_viewport()
+
     machine = vmmanager.get_current_machine()
 
     if not initilized then

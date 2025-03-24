@@ -1,37 +1,64 @@
-local vmmanager = require("retro_computers:emulator/vmmanager")
-local blocks = require("retro_computers:blocks")
-local display3d = require("retro_computers:emulator/display3d")
 local config = require("retro_computers:config")
+local blocks = require("retro_computers:blocks")
+local vmmanager = require("retro_computers:emulator/vmmanager")
+local display3d = require("retro_computers:display3d")
+local ibm_xt =  require("retro_computers:emulator/machine/ibm_xt")
+
+local speakers = {}
+local display3d_offsets = {
+    [0] = {0.49, 0.79, 0.652},
+    [1] = {0.66, 0.79, 0.500},
+    [2] = {0.498, 0.79, 0.34},
+    [3] = {0.348, 0.79, 0.51},
+}
 
 function on_interact(x, y, z, pid)
+    local machine_id = blocks.get_field(x, y, z, "vm_id") or vmmanager.get_next_id()
+    local machine = vmmanager.get_machine(machine_id)
+
+    if not machine then
+        machine = ibm_xt.new(machine_id)
+
+        if machine then
+            local speaker = machine:get_component("pc_speaker")
+            local key = tostring(x) .. ":" .. tostring(y) .. ":" .. tostring(z)
+
+            speakers[key] = {0, 0}
+
+            speaker:set_handler(function(freq)
+
+                if not audio.is_playing(speakers[key][1]) then
+                    speakers[key][1] = audio.play_sound("computer/beep", x, y, z, 0.5, 1.0 / freq * 150, "regular", false)
+                end
+            end)
+
+            machine:set_event_handler(function(_, event_id)
+                if (event_id == ibm_xt.EVENTS.START) or (event_id == ibm_xt.EVENTS.LOAD_STATE)  then
+                    speakers[key][2] = audio.play_sound("computer/running", x, y, z, 1.0, 1.0, "regular", true)
+                elseif (event_id == ibm_xt.EVENTS.STOP) or (event_id == ibm_xt.EVENTS.DELETE) then
+                    audio.stop(speakers[key][2])
+                end
+            end)
+
+            blocks.set_field(x, y, z, "vm_id", machine.id)
+            vmmanager.registry(machine, machine.id)
+            vmmanager.load_machine_state(machine)
+        end
+    end
+
+    if config.enable_screen_3d then
+        local display3 = machine:get_component("display3d")
+
+        if not display3 then
+            machine:set_component("display3d", display3d.new(x, y, z, block.get_rotation(x, y, z), 0.0006, display3d_offsets, {80, 80, 80}, machine:get_component("display")))
+        end
+    end
+
     blocks.set_current_block(x, y, z)
-    vmmanager.set_current_machine(1)
+    vmmanager.set_current_machine(machine_id)
     hud.show_overlay("retro_computers:ibm_xt")
 
-    if config.enable_screen_3d then
-        local machine = vmmanager.get_machine(1)
-        if machine then
-            if not machine.components.display3d then
-                machine.components.display3d = display3d.new(x, y, z, block.get_rotation(x, y, z), machine.components.display)
-            else
-                machine.components.display3d:reset(x, y, z, block.get_rotation(x, y, z))
-            end
-        end
-    end
-
     return true
-end
-
-function on_blocks_tick()
-    if config.enable_screen_3d then
-        local machine = vmmanager.get_machine(1)
-
-        if machine then
-            if machine.components.display3d then
-                machine.components.display3d:update()
-            end
-        end
-    end
 end
 
 function on_placed(x, y, z, pid)
@@ -39,17 +66,17 @@ function on_placed(x, y, z, pid)
 end
 
 function on_broken(x, y, z, pid)
-    blocks.unregistry(x, y, z)
-
-    local machine = vmmanager.get_machine(1)
+    local machine_id = blocks.get_field(x, y, z, "vm_id")
+    local machine = vmmanager.get_machine(machine_id)
 
     if machine then
-        if config.enable_screen_3d then
-            if machine.components.display3d then
-                machine.components.display3d:delete()
-            end
-        end
+        local display3 = machine:get_component("display3d")
 
-        machine:shutdown()
+        if display3 then
+            display3:delete()
+        end
     end
+
+    vmmanager.delete_machine(machine_id)
+    blocks.unregistry(x, y, z)
 end

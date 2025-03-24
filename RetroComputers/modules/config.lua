@@ -1,32 +1,36 @@
+---@diagnostic disable: undefined-field
 local logger = require("retro_computers:logger")
 
 local config = {}
 local global_path = pack.shared_file("retro_computers", "config.json")
 local local_path = pack.data_file("retro_computers", "config.json")
 local default = {
-    screen_keyboard_delay = 80,
-    auto_search_floppys = true,
-    floppy_paths = {"retro_computers:disks"},
-    page_width = 200,
-    page_height = 300,
-    create_page_item = false,
-    font_scale = 1.0,
-    check_for_updates = false,
     enable_screen_3d = true,
-    graphics_screen_renderer_delay = 0.5,
-    save_virtual_machine_state = true,
-    draw_text_background = false,
-    enable_post_card = false
+    save_state = false,
+    post_card = false,
+    screen_keyboard_delay = 80,
+    screen = {
+        renderer_delay = 0.1,
+        draw_text_background = false,
+        scale = 1.0
+    },
+    ibm_xt = {
+        rom = {{filename = "GLABIOS_0.2.5_8E.ROM", addr = 0xFE000}},
+        video = "cga" -- MDA / CGA / Hercules
+    }
 }
 
 function config.save()
-    logger:info("Config: Saving")
+    logger.info("Config: Saving")
+
     local data = {}
+
     for key, value in pairs(config) do
         if  type(value) ~= "function" then
             data[key] = value
         end
     end
+
     if file.exists(local_path) then
         file.write(local_path, json.tostring(data, true))
     else
@@ -35,24 +39,42 @@ function config.save()
 end
 
 function config.load()
-    logger:info("Config: Loading")
     local data = {}
+
     if file.exists(local_path) then
-        logger:info("Config: Local loaded")
+        logger.info("Config: Local loaded")
         data = json.parse(file.read(local_path))
     elseif file.exists(global_path) then
-        logger:info("Config: Global loaded")
+        logger.info("Config: Global loaded")
         data = json.parse(file.read(global_path))
     else
-        logger:info("Config: Creating config")
+        logger.info("Config: Creating config")
         file.write(global_path, json.tostring(default, true))
     end
 
     for key, value in pairs(default) do
-        if data[key] ~= nil then
-            config[key] = data[key]
+        if type(value) == "table" then
+            config[key] = {}
+
+            if data[key] ~= nil then
+                for key2, value2 in pairs(value) do
+                    if data[key][key2] ~= nil then
+                        config[key][key2] = data[key][key2]
+                    else
+                        config[key][key2] = value2
+                    end
+                end
+            else
+                for key2, value2 in pairs(value) do
+                    config[key][key2] = value2
+                end
+            end
         else
-            config[key] = value
+            if data[key] ~= nil then
+                config[key] = data[key]
+            else
+                config[key] = value
+            end
         end
     end
 
@@ -61,7 +83,7 @@ function config.load()
             if rawget(config, key) ~= nil then
                 return rawget(config, key)
             else
-                logger:error("Config: Unknown key %s", tostring(key))
+                logger.error("Config: Unknown key %s", tostring(key))
             end
         end
     })
@@ -69,7 +91,11 @@ end
 
 function config.reset()
     for key, value in pairs(default) do
-        config[key] = value
+        if type(value) == "table" then
+            config[key] = table.copy(value)
+        else
+            config[key] = value
+        end
     end
 end
 

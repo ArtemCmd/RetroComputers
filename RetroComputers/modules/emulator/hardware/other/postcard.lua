@@ -1,8 +1,7 @@
 local logger = require("retro_computers:logger")
-local config = require("retro_computers:config")
 
-local bios_code = {
-    ["bios_xt"] = {
+local post_codes = {
+    ["8088bios"] = {
         [0x00] = "Boot the OS",
         [0x01] = "Start of BIOS POST, CPU test",
         [0x02] = "Initial chipset configuration",
@@ -44,21 +43,20 @@ local bios_code = {
 local postcard = {}
 
 function postcard.new(cpu, used_bios)
-    cpu:port_set(0x80, function (_, _, val)
+    cpu:set_port(0x80, function(_, _, val)
         if val then
-            if config.enable_post_card then
-                local codes = bios_code[used_bios]
+            local codes = post_codes[used_bios]
 
-                if codes then
-                    if codes[val] then
-                        logger:debug("POST Card: %s", bios_code[used_bios][val])
-                    end
-                else
-                    logger:debug("POST Card: %d", val)
+            if codes then
+                if codes[val] then
+                    logger.debug("POST Card: %s", codes[val])
+                    return
                 end
             end
+
+            logger.debug("POST Card: 0x%02X", val)
         else
-            return 0
+            return 0xFF
         end
     end)
 end

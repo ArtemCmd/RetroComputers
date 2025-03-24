@@ -1,5 +1,6 @@
 {
   "icon-type": "sprite",
   "icon": "items:floppy_2",
-  "stack-size": 1
+  "stack-size": 1,
+  "caption": "ELKS"
 }

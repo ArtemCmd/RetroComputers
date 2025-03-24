@@ -1,11 +1,11 @@
+---@diagnostic disable: undefined-field
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local config = require("retro_computers:config")
-local drive_manager = require("retro_computers:emulator/drive_manager")
 
 function on_hud_open()
     -- Setup commands
     -- VMmanager
-    console.add_command("retro_computers.vmmanager.get_machine_info id:int", "Show machine info", function(args, kwargs)
+    console.add_command("retro_computers.vmmanager.get_info id:int", "Show machine info", function(args, kwargs)
         local machine = vmmanager.get_machine(args[1])
 
         if machine then
@@ -24,16 +24,17 @@ function on_hud_open()
         end
     end)
 
-    console.add_command("retro_computers.vmmanager.list", "Shows existing virtual machine ids", function(args, kwargs)
+    console.add_command("retro_computers.vmmanager.list", "Shows existing virtual machine IDs", function(args, kwargs)
         local machines = vmmanager.get_machines()
 
         console.log("Virtual Machines:")
+
         for i, _ in pairs(machines) do
-            console.log(i)
+            console.log("   " .. i)
         end
     end)
 
-    console.add_command("retro_computers.vmmanager.save_virtual_machine_state id:int path:str", "Saves virtual machine state", function(args, kwargs)
+    console.add_command("retro_computers.vmmanager.save_state machine_id:int path:str", "Saves virtual machine state", function(args, kwargs)
         local machine = vmmanager.get_machine(args[1])
 
         if machine then
@@ -43,7 +44,7 @@ function on_hud_open()
         end
     end)
 
-    console.add_command("retro_computers.vmmanager.load_virtual_machine_state id:int path:str", "Loads the virtual machine state", function(args, kwargs)
+    console.add_command("retro_computers.vmmanager.load_state machine_id:int path:str", "Loads the virtual machine state", function(args, kwargs)
         if file.exists(args[2]) then
             local machine = vmmanager.get_machine(args[1])
 
@@ -57,109 +58,97 @@ function on_hud_open()
         end
     end)
 
+    console.add_command("retro_computers.vmmanager.clean", "Clear unused virtual machines", function(args, kwargs)
+        local dirs = file.list("world:data/retro_computers/machines")
+        local count = 0
+
+        for i = 1, #dirs, 1 do
+            local dir = dirs[i]
+            local splitted_str = string.split(dir, "/")
+            local dir_name = splitted_str[#splitted_str]
+            local machine_id = tonumber(dir_name)
+
+            if not vmmanager.get_machine(machine_id) then
+                file.remove_tree(dir)
+                count = count + 1
+            end
+        end
+
+        console.log("Clear " .. count .. " machines")
+    end)
+
     -- Config
     console.add_command("retro_computers.config.list", "Show available configuration", function(args, kwargs)
         console.log("Current config:")
 
-        local function print_table(t)
+        local level = 0
+
+        local function print_table(t, noroot)
+            local spaces = string.rep(" ", 4 * level)
+            local value_spaces = string.rep(" ", 4 * (level + 1))
+
+            console.log(spaces .. "{")
+
             for key, value in pairs(t) do
                 if type(value) ~= "function" then
                     if type(value) == "table" then
-                        console.log("   " .. key .. ":")
-                        print_table(value)
+                        level = level + 1
+                        console.log(value_spaces .. tostring(key) .. " =")
+                        print_table(value, true)
+                        level = level - 1
                     else
-                        console.log("       " .. key .. " = " .. tostring(value))
+                        console.log(value_spaces .. key .. " = " .. tostring(value) .. ",")
+                    end
+                end
+            end
+
+            if noroot then
+                console.log(spaces .. "},")
+            else
+                console.log(spaces .. "}")
+            end
+        end
+
+        print_table(config, false)
+    end)
+
+    console.add_command("retro_computers.config.set name:str value:str", "Sets value in config\nExample: retro_computers.config.set \"screen.renderer_delay\" \"0.15\"", function(args, kwargs)
+        local keys = string.split(args[1], ".")
+        local new_val = args[2]
+        local key_index = 1
+
+        local function recursive_set(t, val)
+            local key = keys[key_index]
+            local value = t[key]
+
+            if value then
+                if key_index == #keys then
+                    if type(value) == "string" then
+                        t[key] = val
+                    elseif type(value) == "number" then
+                        t[key] = tonumber(val)
+                    elseif type(value) == "boolean" then
+                        t[key] = val == "true"
+                    end
+
+                    console.log(string.format("Key \"%s\" set to \"%s\"", args[1], new_val))
+                else
+                    if type(value) == "table" then
+                        key_index = key_index + 1
+                        recursive_set(value, val)
                     end
                 end
             end
         end
 
-        for key, value in pairs(config) do
-            if type(value) ~= "function" then
-                if type(value) == "table" then
-                    console.log("   " .. key .. ":")
-                    print_table(value)
-                else
-                    console.log("   " .. key .. " = " .. tostring(value))
-                end
-            end
-        end
-    end)
-
-    console.add_command("retro_computers.config.set name:str value:num", "Set configuration", function(args, kwargs)
-        local name = args[1]
-        local val = args[2]
-        if config[name] ~= nil then
-            if type(config[name]) == "number" then
-                config[name] = val
-                console.log("Key \"" .. name .. "\" set to " .. tostring(val))
-            elseif type(config[name]) == "boolean" then
-                config[name] = (val == 1)
-                console.log("Key \"" .. name .. "\" set to " .. tostring(val == 1))
-            else
-                console.log("Failed set " .. name)
-            end
-        else
-            console.log("Key " .. name .. " not found")
-        end
+        recursive_set(config, new_val)
     end)
 
     console.add_command("retro_computers.config.reset", "Reset config", function(args, kwargs)
         config.reset()
     end)
 
-    console.add_command("retro_computers.config.save", "Save current configuration", function(args, kwargs)
+    console.add_command("retro_computers.config.save", "Save config changes", function(args, kwargs)
         config.save()
-        console.log("Config saved")
-    end)
-
-    -- DriveManager
-    console.add_command("retro_computers.drive_manager.create_hard_disk path:str fileformat:str sector_size:int cylinders:int heads:int sectors:int", "Creates a hard disk image.\nSupported file formats: RAW, HDF", function (args, kwargs)
-        if drive_manager.create_hard_disk(args[1], args[4], args[5], args[6], args[3], args[2]) then
-            console.log("Creation successful")
-        else
-            console.log("Creation failed")
-        end
-    end)
-
-    -- Serial
-    console.add_command("retro_computers.serial.send machineid:int port:int message:str", "Send string to serial port", function(args, kwargs)
-        local machine = vmmanager.get_machine(args[1])
-
-        if machine then
-            local serial = machine.components.serial
-
-            if serial then
-                local ports = {0x3F8, 0x2F8, 0x3E8, 0x2E8, 0x5F8, 0x4F8, 0x5E8, 0x4E8}
-                local port_num = ports[args[2]]
-
-                if port_num then
-                    local str = args[3]
-
-                    for i = 1, #str, 1 do
-                        serial:write_port(port_num, string.byte(str:sub(i, i)))
-                    end
-                end
-            else
-                console.log("Serial port is not available")
-            end
-        else
-            console.log("Machine not found")
-        end
-    end)
-
-    console.add_command("retro_computers.check_update", "Checking for updates", function(args, kwargs)
-        console.log("Checking for updates...")
-
-        network.get("https://raw.githubusercontent.com/ArtemCmd/RetroComputers/main/RetroComputers/package.json", function(str)
-            local data = json.parse(str)
-            local package = json.parse(file.read("retro_computers:package.json"))
-
-            if data.version ~= package.version then
-                console.log("Found a new version on https://github.com/ArtemCmd/RetroComputers/tree/main")
-            else
-                console.log("No updates found")
-            end
-        end)
     end)
 end
