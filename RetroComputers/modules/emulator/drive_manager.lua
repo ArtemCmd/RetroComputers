@@ -23,7 +23,7 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
             logger.error("DriveManager: Item creation failed, saved in \"world:data/retro_computers/items/floppy_%s\"", name)
 
             if not file.exists(new_item_path) then
-                file.write(new_item_path, json.tostring(item, true))
+                local _, _ = pcall(file.write, new_item_path, json.tostring(item, true))
             end
         end
     end

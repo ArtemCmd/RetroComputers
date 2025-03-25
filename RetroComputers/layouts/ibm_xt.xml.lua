@@ -79,7 +79,7 @@ local function refresh()
                 for y = 0, height - 1, 1 do
                     for x = 0, width - 1, 1 do
                         local pixel = unpack_color(display.buffer[y * width + x])
-                        canvas:set(x, height - y, pixel[1], pixel[2], pixel[3], 255)
+                        canvas:set(x, y, pixel[1], pixel[2], pixel[3], 255)
                     end
                 end
 
@@ -173,6 +173,8 @@ function start_vm()
             machine:shutdown()
             timer_animation = 255
             start_animation = false
+
+            set_resolution(80, 25, false)
         else
             machine:start()
             start_animation = true

@@ -430,7 +430,7 @@ local function port_43(self)
                     channel.lcounter = channel.lcounter - 1
                 end
 
-                logger.debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s. Count = %04X", channel_num, channel.read_mode, channel.mode, channel.bcd, channel.count)
+                -- logger.debug("i8253: Channel %d: Setting: Access mode = %d, Operating mode = %d, BSD = %s. Count = %04X", channel_num, channel.read_mode, channel.mode, channel.bcd, channel.count)
             end
         else
             return 0x00
