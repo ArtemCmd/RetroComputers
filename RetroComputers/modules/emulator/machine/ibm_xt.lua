@@ -10,20 +10,16 @@ local pic = require("retro_computers:emulator/hardware/i8259")
 local keyboard = require("retro_computers:emulator/hardware/keyboard/keyboard_xt")
 local dma = require("retro_computers:emulator/hardware/i8237")
 local lpt = require("retro_computers:emulator/hardware/lpt")
-local display = require("retro_computers:emulator/display")
+local screen = require("retro_computers:emulator/screen")
 local postcard = require("retro_computers:emulator/hardware/other/postcard")
 local fdc = require("retro_computers:emulator/hardware/floppy/fdc")
 local pc_speaker = require("retro_computers:emulator/hardware/sound/pc_speaker")
 local hdc = require("retro_computers:emulator/hardware/disk/st506")
 local cga = require("retro_computers:emulator/hardware/video/cga")
-local hercules = require("retro_computers:emulator/hardware/video/hercules")
-local mda = require("retro_computers:emulator/hardware/video/mda")
 
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
 
 local videocards = {
-    ["mda"] = mda,
-    ["hercules"] = hercules,
     ["cga"] = cga
 }
 
@@ -37,7 +33,7 @@ function RAM.new(machine)
     setmetatable(self, {
         __index = function(t, key)
             if key < 0xA0000 then
-                return ram_base[key] or 0x00
+                return ram_base[key]
             elseif (key >= machine.components.videocard.vram_start) and (key <= machine.components.videocard.vram_end) then
                 return machine.components.videocard:vram_read(key)
             elseif (key >= 0xC8000) and (key < 0xCA000) then
@@ -182,7 +178,7 @@ local function start(self)
                     end
                 end
             else
-                logger.error("IBM XT: ROM \"%S\" not found", rom.filename)
+                logger.error("IBM XT: ROM \"%s\" not found", rom.filename)
             end
         end
 
@@ -208,8 +204,8 @@ local function update(self)
         components.hdc:update()
         components.videocard:update()
 
-        if components.display3d then
-            components.display3d:update()
+        if components.screen3d then
+            components.screen3d:update()
         end
     end
 end
@@ -308,7 +304,7 @@ function machine.new(id)
     self.components.cpu = cpu.new(self.components.memory)
     self.components.pic = pic.new(self.components.cpu)
     self.components.pit = pit.new(self.components.cpu)
-    self.components.display = display.new(self)
+    self.components.screen = screen.new(self)
 
     local videocard = videocards[config.ibm_xt.video]
 
@@ -317,7 +313,7 @@ function machine.new(id)
         logger.error("IBM XT: Unknown videocard \"%s\"", config.ibm_xt.video)
     end
 
-    self.components.videocard = videocard.new(self.components.cpu, self.components.display)
+    self.components.videocard = videocard.new(self.components.cpu, self.components.screen)
 
     self.components.dma = dma.new(self.components.cpu, self.components.memory)
     self.components.lpt = lpt.new(self.components.cpu)

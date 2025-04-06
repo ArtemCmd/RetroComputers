@@ -1,14 +1,9 @@
-local string_format = string.format
 local logger = {}
 local logs = {}
 
-local function get_time()
-	local date = os.date("*t")
-	return string_format("%04d/%02d/%02d %02d:%02d:%02d", date.year, date.month, date.day, date.hour, date.min, date.sec)
-end
-
 local function log(level, msg, ...)
-    local str = string_format("[%s] %s		 [      RetroComputers] %s", level, get_time(), string_format(msg, ...))
+    local date = os.date("*t")
+    local str = string.format("[%s] %04d/%02d/%02d %02d:%02d:%02d		 [      RetroComputers] %s", level, date.year, date.month, date.day, date.hour, date.min, date.sec, string.format(msg, ...))
     print(str)
     table.insert(logs, str .. '\n')
 end

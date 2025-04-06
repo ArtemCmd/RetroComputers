@@ -1,11 +1,11 @@
 local config = require("retro_computers:config")
 local blocks = require("retro_computers:blocks")
 local vmmanager = require("retro_computers:emulator/vmmanager")
-local display3d = require("retro_computers:display3d")
 local ibm_xt =  require("retro_computers:emulator/machine/ibm_xt")
+local screen3d = require("retro_computers:screen3d")
 
 local speakers = {}
-local display3d_offsets = {
+local screen3d_offsets = {
     [0] = {0.49, 0.79, 0.652},
     [1] = {0.66, 0.79, 0.500},
     [2] = {0.498, 0.79, 0.34},
@@ -47,10 +47,10 @@ function on_interact(x, y, z, pid)
     end
 
     if config.enable_screen_3d then
-        local display3 = machine:get_component("display3d")
+        local screen = machine:get_component("screen3d")
 
-        if not display3 then
-            machine:set_component("display3d", display3d.new(x, y, z, block.get_rotation(x, y, z), 0.0006, display3d_offsets, {80, 80, 80}, machine:get_component("display")))
+        if not screen then
+            machine:set_component("screen3d", screen3d.new(x, y, z, block.get_rotation(x, y, z), 0.0006, screen3d_offsets, {80, 80, 80}, machine:get_component("screen")))
         end
     end
 
@@ -70,10 +70,10 @@ function on_broken(x, y, z, pid)
     local machine = vmmanager.get_machine(machine_id)
 
     if machine then
-        local display3 = machine:get_component("display3d")
+        local screen = machine:get_component("screen3d")
 
-        if display3 then
-            display3:delete()
+        if screen then
+            screen:delete()
         end
     end
 

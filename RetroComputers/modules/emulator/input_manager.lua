@@ -61,7 +61,7 @@ local scancodes = {
     ["left-ctrl"] = 0x1D,
     ["left-alt"] = 0x38,
     ["delete"] = 0x53,
-    ["kovichki"] = 0x28,
+    ["\""] = 0x28,
     ["="] = 0x0D,
     ["f1"] = 0x3B,
     ["f2"] = 0x3C,

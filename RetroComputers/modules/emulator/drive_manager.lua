@@ -3,7 +3,14 @@ local logger = require("retro_computers:logger")
 
 local manager = {}
 local disks = {}
-local last_id = 1
+
+local function pwrite(path, data)
+    local ok, result = pcall(file.write, path, data)
+
+    if not ok then
+        logger.error("DriveManager: Item creation failed, %s", path)
+    end
+end
 
 local function add_floppy(path, packid, name, readonly, iconid, caption)
     local item_path = packid .. ":items/floppy_" .. name .. ".json"
@@ -16,15 +23,14 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
             ["caption"] = caption,
         }
 
-        local ok, result = pcall(file.write, item_path, json.tostring(item, true))
-
-        if not ok then
-            local new_item_path = "world:data/retro_computers/items/floppy_" .. name .. ".json"
-            logger.error("DriveManager: Item creation failed, saved in \"world:data/retro_computers/items/floppy_%s\"", name)
-
-            if not file.exists(new_item_path) then
-                local _, _ = pcall(file.write, new_item_path, json.tostring(item, true))
-            end
+        if not file.is_writeable(item_path) then
+            -- :(
+            -- pack.request_writeable(packid, function(entry_point)
+            --     item_path = string.replace(item_path, packid, entry_point)
+            --     pwrite(item_path, json.tostring(item, true))
+            -- end)
+        else
+            pwrite(item_path, json.tostring(item, true))
         end
     end
 
@@ -35,7 +41,6 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
     }
 
     disks[name] = floppy
-    last_id = last_id  + 1
 
     logger.info("DriveManager: Floppy \"%s\" added", caption)
 end
@@ -44,42 +49,15 @@ local function load_floppy(path)
     local packid = string.split(path, ":")[1]
     local data = json.parse(file.read(path .. "/floppy.json"))
 
-    if data.name then
-        local name = data.name or ("FLoppy " .. last_id)
-        local filename = data.filename or "Disk1.img"
-        local readonly = data.readonly or false
-        local caption = data.caption or name
+    for _, floppy in pairs(data) do
+        local name = floppy.name
+        local caption = floppy.caption or name
+        local filename = floppy.filename or "floppy.img"
+        local readonly = floppy.readonly or false
+        local floppy_path = path .. "/" .. filename
 
-        if (type(name) == "table") and (type(filename) == "table") then
-            if #name == #filename then
-                local icon_id = math.random(1, 6)
-
-                for i = 1, #name, 1 do
-                    local floppy_path = path .. "/" .. filename[i]
-
-                    if file.exists(floppy_path) then
-                        add_floppy(floppy_path, packid, name[i], readonly, icon_id, caption[i])
-                    end
-                end
-            end
-        else
-            local floppy_path = path .. "/" .. filename
-
-            if file.exists(floppy_path) then
-                add_floppy(floppy_path, packid, name, readonly, math.random(1, 6), caption)
-            end
-        end
-    else
-        for _, floppy in pairs(data) do
-            local name = floppy.name
-            local caption = floppy.caption or name
-            local filename = floppy.filename or "floppy.img"
-            local readonly = floppy.readonly or false
-            local floppy_path = path .. "/" .. filename
-
-            if file.exists(floppy_path) then
-                add_floppy(floppy_path, packid, name, readonly, math.random(1, 6), caption)
-            end
+        if file.exists(floppy_path) then
+            add_floppy(floppy_path, packid, name, readonly, math.random(1, 6), caption)
         end
     end
 end

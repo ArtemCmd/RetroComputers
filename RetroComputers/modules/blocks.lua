@@ -3,16 +3,19 @@ local blocks = {}
 local list = {}
 local current_block
 local PATH = pack.data_file("retro_computers", "blocks.json")
+local edited = false
 
 local function get_key(x, y, z)
     return tostring(x) .. ":" .. tostring(y) .. ":" .. tostring(z)
 end
 
 function blocks.registry(x, y, z, type)
+    edited = true
     list[get_key(x, y, z)] = {pos = {x, y, z}, type = type or "unknown", fields = {}}
 end
 
 function blocks.unregistry(x, y, z)
+    edited = true
     list[get_key(x, y, z)] = nil
 end
 
@@ -63,7 +66,9 @@ function blocks.load()
 end
 
 function blocks.save()
-    file.write(PATH, json.tostring(list, false))
+    if edited then
+        file.write(PATH, json.tostring(list, false))
+    end
 end
 
 return blocks

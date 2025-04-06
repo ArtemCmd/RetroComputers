@@ -11,7 +11,6 @@ local is_pressed = input.is_pressed
 local machine = nil
 local left_shift = false
 
--- Char, Key name
 local shift_chars = {
     ['Q'] = 'q',
     ['W'] = 'w',
@@ -42,7 +41,7 @@ local shift_chars = {
     ['<'] = ',',
     ['>'] = '.',
     ['?'] = '/',
-    ['"'] = 'kovichki',
+    ['"'] = '\"',
     [':'] = ';',
     ['{'] = '[',
     ['}'] = ']',
@@ -88,7 +87,7 @@ end
 
 local function send_key(key)
     if machine then
-        local scancode = input_manager.get_scancode(key) or 0
+        local scancode = input_manager.get_scancode(key) or 0x00
 
         if scancode == 0x2A then
             left_shift = not left_shift
@@ -152,14 +151,13 @@ function on_open()
     local keyboard = document.root
     local viewport = gui.get_viewport()
 
-    machine = vmmanager.get_current_machine()
-
     if not initilized then
         initilized = true
         keyboard:setInterval(config.screen_keyboard_delay, update_keyboard)
     end
 
     keyboard.pos = {viewport[1] / 2 - keyboard.size[1] / 2, viewport[2] / 2 - keyboard.size[2] / 2}
+    machine = vmmanager.get_current_machine()
 
     if machine then
         machine.is_focused = false

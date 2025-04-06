@@ -1,8 +1,6 @@
-<container size='640, 230'>
+<container size='640, 230' gravity='center-center'>
     <container id='screen' size='640, 200' color='#000000FF'>
-        <container id='screen_text' size='640, 200' color='#000000FF'/>
-        <canvas id='screen_graphics' size='640, 200' visible='false'/>
-        <image id='cursor' pos='100, 100' size='8, 2' color='#555555' visible='false'/>
+        <canvas id='screen_graphics' size='640, 200'/>
         <container id='screen_animation' size='640, 200' color='#000000FF'/>
     </container>
 

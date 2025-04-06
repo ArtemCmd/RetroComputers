@@ -72,7 +72,7 @@
     <button pos='345, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("k")'/>
     <button pos='383, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("l")'/>
     <button pos='421, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key(";")'/>
-    <button pos='458, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("kovichki")'/>
+    <button pos='458, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key(string.char(34))'/>
     <button pos='495, 114' size='75, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("enter")'/>
     <button pos='699, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("4")'/>
     <button pos='736, 114' size='36, 35' color='#00000000' hover-color='#0C1926BE' onclick='button_key("5")'/>
