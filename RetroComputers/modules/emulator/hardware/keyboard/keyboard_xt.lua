@@ -65,7 +65,7 @@ local function port_61(self)
                     self.key_queue_start = 0
                     self.key_queue_end = 0
                     self.enabled = true
-                    send(self, 0xAA)
+                    send(self, 0xAA) -- Send Reset Byte
                 end
 
                 self.clock = band(val, 0x40) ~= 0
@@ -126,7 +126,7 @@ function keyboard.new(machine, cpu, pic, pit, speaker, videocard, fdd_count)
         reset = reset,
     }
 
-    self.port_d = bor(lshift(fdd_count - 1, 6), 0x1)
+    self.port_d = bor(lshift(fdd_count - 1, 6), 0x01)
 
     local type = videocard:get_type()
 

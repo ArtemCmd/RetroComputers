@@ -130,8 +130,6 @@ local function block_transfer(self, channel_num)
             self.buffer[i] = channel_read(self, channel_num)
         end
     end
-
-    logger.debug("DMA: Channel %d: Block transferred, Address = %04X, Count = %04X", channel_num, channel.base_addr, channel.base_count)
 end
 
 local function request_service(self, channel_num)
@@ -200,10 +198,10 @@ local function port_page_register(self, channel_num)
 
     return function(cpu, port, val)
         if val then
-            channel.page = val
+            channel.page = band(val, 0xF)
 
             channel.base_addr = bor(band(channel.base_addr, 0xFFFF), lshift(channel.page, 16))
-            channel.curr_addr = channel.base_addr
+            channel.curr_addr = bor(band(channel.curr_addr, 0xFFFF), lshift(channel.page, 16))
         else
             return channel.page
         end

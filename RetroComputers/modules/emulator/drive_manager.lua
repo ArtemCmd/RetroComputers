@@ -29,6 +29,7 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
             --     item_path = string.replace(item_path, packid, entry_point)
             --     pwrite(item_path, json.tostring(item, true))
             -- end)
+            -- pwrite("world:data/retro_computers/items/floppy_" .. name .. ".json", json.tostring(item, true))
         else
             pwrite(item_path, json.tostring(item, true))
         end
@@ -48,6 +49,7 @@ end
 local function load_floppy(path)
     local packid = string.split(path, ":")[1]
     local data = json.parse(file.read(path .. "/floppy.json"))
+    local icon_id = math.random(1, 6)
 
     for _, floppy in pairs(data) do
         local name = floppy.name
@@ -57,7 +59,7 @@ local function load_floppy(path)
         local floppy_path = path .. "/" .. filename
 
         if file.exists(floppy_path) then
-            add_floppy(floppy_path, packid, name, readonly, math.random(1, 6), caption)
+            add_floppy(floppy_path, packid, name, readonly, icon_id, caption)
         end
     end
 end

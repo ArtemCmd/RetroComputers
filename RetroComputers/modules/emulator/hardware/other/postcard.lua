@@ -42,10 +42,10 @@ local post_codes = {
 
 local postcard = {}
 
-function postcard.new(cpu, used_bios)
+function postcard.new(cpu, bios_name)
     cpu:set_port(0x80, function(_, _, val)
         if val then
-            local codes = post_codes[used_bios]
+            local codes = post_codes[bios_name]
 
             if codes then
                 if codes[val] then

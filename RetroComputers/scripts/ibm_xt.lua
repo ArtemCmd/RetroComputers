@@ -50,7 +50,7 @@ function on_interact(x, y, z, pid)
         local screen = machine:get_component("screen3d")
 
         if not screen then
-            machine:set_component("screen3d", screen3d.new(x, y, z, block.get_rotation(x, y, z), 0.0006, screen3d_offsets, {80, 80, 80}, machine:get_component("screen")))
+            machine:set_component("screen3d", screen3d.new(x, y, z, block.get_rotation(x, y, z), 0.00006, screen3d_offsets, {80, 80, 80}, machine:get_component("screen")))
         end
     end
 

@@ -275,6 +275,27 @@ local function write_rm(self, opcode, val)
     end
 end
 
+local function out_port(self, port, val)
+    local handler = self.io_ports[port]
+
+    if handler ~= nil then
+        handler(self, port, val)
+    -- else
+    --     logger.warning("i8086: OUT: port 0x%02X not found", port)
+    end
+end
+
+local function in_port(self, port)
+    local handler = self.io_ports[port]
+
+    if handler ~= nil then
+        return band(handler(self, port, nil), 0xFF)
+    else
+        -- logger.warning("i8086: IN: port 0x%02X not found", port)
+        return 0xFF
+    end
+end
+
 local function cpu_push16(self, val)
     self.regs[5] = band(self.regs[5] - 2, 0xFFFF)
     self.memory:w16(lshift(self.segments[3], 4) + self.regs[5], band(val, 0xFFFF))
@@ -286,24 +307,23 @@ local function cpu_pop16(self)
     return self.memory:r16(lshift(self.segments[3], 4) + sp)
 end
 
-local function cpu_in(self, port)
-    local handler = self.io_ports[port]
+local function cpu_in(self, word, port)
+    if word then
+        local low = in_port(self, port)
+        local high = in_port(self, port + 1)
 
-    if handler ~= nil then
-        return handler(self, port, nil)
+        return bor(low, high)
     else
-        -- logger.warning("i8086: IN: port 0x%02X not found", port)
-        return 0xFF
+        return in_port(self, port)
     end
 end
 
-local function cpu_out(self, port, val)
-    local handler = self.io_ports[port]
-
-    if handler ~= nil then
-        handler(self, port, val)
-    -- else
-    --     logger.warning("i8086: OUT: port 0x%02X not found", port)
+local function cpu_out(self, word, port, val)
+    if word then
+        out_port(self, port, band(val, 0xFF))
+        out_port(self, port + 1, rshift(val, 8))
+    else
+        out_port(self, port, val)
     end
 end
 
@@ -1555,22 +1575,22 @@ end
 
 -- IN AL, Ib
 opcode_map[0xE4] = function(self, opcode)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(self, fetch_byte(self)), 0xFF))
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), cpu_in(self, false, fetch_byte(self)))
 end
 
 -- IN AX, Ib
 opcode_map[0xE5] = function(self, opcode)
-    self.regs[1] = band(cpu_in(self, fetch_byte(self)), 0xFFFF)
+    self.regs[1] = cpu_in(self, true, fetch_byte(self))
 end
 
 -- OUT AL, Ib
 opcode_map[0xE6] = function(self, opcode)
-    cpu_out(self, fetch_byte(self), band(self.regs[1], 0xFF))
+    cpu_out(self, false, fetch_byte(self), band(self.regs[1], 0xFF))
 end
 
 -- OUT AX, Ib
 opcode_map[0xE7] = function(self, opcode)
-    cpu_out(self, fetch_byte(self), self.regs[1])
+    cpu_out(self, true, fetch_byte(self), self.regs[1])
 end
 
 -- CALL rel16
@@ -1602,22 +1622,22 @@ end
 
 -- IN AL, DX
 opcode_map[0xEC] = function(self, opcode)
-    self.regs[1] = bor(band(self.regs[1], 0xFF00), band(cpu_in(self, self.regs[3]), 0xFF))
+    self.regs[1] = bor(band(self.regs[1], 0xFF00), cpu_in(self, false, self.regs[3]))
 end
 
 -- IN AX, DX
 opcode_map[0xED] = function(self, opcode)
-    self.regs[1] = band(cpu_in(self, self.regs[3]), 0xFFFF)
+    self.regs[1] = cpu_in(self, true, self.regs[3])
 end
 
 -- OUT AL, DX
 opcode_map[0xEE] = function(self, opcode)
-    cpu_out(self, self.regs[3], band(self.regs[1], 0xFF))
+    cpu_out(self, false, self.regs[3], band(self.regs[1], 0xFF))
 end
 
 -- OUT AX, DX
 opcode_map[0xEF] = function(self, opcode)
-    cpu_out(self, self.regs[3], self.regs[1])
+    cpu_out(self, true, self.regs[3], self.regs[1])
 end
 
 -- LOCK
@@ -1924,14 +1944,6 @@ end
 
 local function get_interrupt_handler(self, id)
     return self.interrupt_handlers[id]
-end
-
-local function out_port(self, port, val)
-    cpu_out(self, port, val)
-end
-
-local function in_port(self, port)
-    return cpu_in(self, port)
 end
 
 local cpu = {}

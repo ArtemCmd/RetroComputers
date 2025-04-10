@@ -346,24 +346,23 @@ local function port_3F2(self) -- DOR
             if band(val, 0x04) == 0 then
                 self.params_num = 0
                 self.params_in = 0
+                self.msr = 0x00
+            elseif band(self.dor, 0x04) == 0 then
                 self.reset_sense_count = 0
                 self.reset_flag = true
                 self.drive_select = 0
                 self.msr = 0x80
                 interrupt(self)
-            else
-                local drive_num = band(val, 0x03)
-
-                for i = 0, 1, 1 do
-                    self.drives[i].motor_enabled = band(val, lshift(0x10, drive_num)) ~= 0
-                end
-
-                if self.drives[drive_num].motor_enabled then
-                    self.drive_select = drive_num
-                end
-
-                self.drq_enabled = band(val, 0x08) ~= 0
             end
+
+            local drive_num = band(val, 0x03)
+
+            for i = 0, 1, 1 do
+                self.drives[i].motor_enabled = band(val, lshift(0x10, drive_num)) ~= 0
+            end
+
+            self.drq_enabled = band(val, 0x08) ~= 0
+            self.drive_select = drive_num
 
             self.dor = val
         else
