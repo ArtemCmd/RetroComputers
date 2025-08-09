@@ -240,7 +240,7 @@ function machine.new(id)
     self.devices.keyboard = require("retro_computers:emulator/hardware/keyboard/keyboard_xt").new(self.devices.cpu, self.devices.pic, self.devices.pit, self.devices.pc_speaker, self.devices.videocard, 2, 0x60, self)
     self.devices.mouse = require("retro_computers:emulator/hardware/mouse/mouse_bus").new(self.devices.cpu, self.devices.pic, 0x23C, 4)
 
-    if config.machine.ibm_xt.post_card then
+    if config.machine.ibm_xt.postcard then
         self.devices.postcard = require("retro_computers:emulator/hardware/postcard").new(self.devices.cpu, 0x80)
     end
 

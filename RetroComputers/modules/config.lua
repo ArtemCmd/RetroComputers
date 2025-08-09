@@ -11,9 +11,28 @@ local default = [==[
 video = "cga"
 postcard = false
 [[machine.ibm_xt.rom]]
-filename = "GLABIOS_0.2.5_8E.ROM"
+filename = "GLABIOS_0.2.6_8E.ROM"
 addr = 0xFE000
 ]==]
+
+local function error_handler(message)
+    logger:error("Config: Failed to load config file: %s", message)
+    print(debug.traceback())
+end
+
+local function merge(table1, table2)
+    for key, val in pairs(table2) do
+        if type(val) == "table" then
+            if table1[key] == nil then
+                table1[key] = {}
+            end
+
+            merge(table1[key], val)
+        elseif table1[key] == nil then
+            table1[key] = val
+        end
+    end
+end
 
 function config.initialize()
     local data = {}
@@ -21,19 +40,17 @@ function config.initialize()
 
     logger:info("Config: Loading...")
 
-    if file.exists(local_path) then
-        data = toml.parse(file.read(local_path))
-    elseif file.exists(global_path) then
-        data = toml.parse(file.read(global_path))
-    else
-        local success, reason = pcall(file.write, global_path, default)
-
-        if not success then
-            logger:error("Config: Creating error: %s", reason)
+    xpcall(function()
+        if file.exists(local_path) then
+            data = toml.parse(file.read(local_path))
+        elseif file.exists(global_path) then
+            data = toml.parse(file.read(global_path))
+        else
+            file.write(global_path, default)
         end
-    end
+    end, error_handler)
 
-    table.merge(data, default_data)
+    merge(data, default_data)
     table.merge(config, data)
 end
 

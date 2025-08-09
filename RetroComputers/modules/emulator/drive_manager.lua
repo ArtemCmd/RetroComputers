@@ -5,6 +5,11 @@ local manager = {}
 local disks = {}
 local count = 0
 
+local function error_handler(message)
+    logger:error("DriveManager: Failed to load floppy disk: %s", message)
+    print(debug.traceback())
+end
+
 local function add_floppy(path, packid, name, readonly, iconid, caption)
     local floppy = {
         path = path,
@@ -15,7 +20,7 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
     disks[name] = floppy
     count = count + 1
 
-    -- if not file.exists(string.format("%s:items/floppy_%s.json", packid, name)) then
+    -- if not file.exists(string.format("%s:items/floppy_%s.json", packid, name)) then -- Item generator
     --     local item = {
     --         ["icon-type"] = "sprite",
     --         ["icon"] = "items:floppy_" .. iconid,
@@ -33,22 +38,6 @@ local function load_floppy(path)
     local packid = file.prefix(path)
     local data = json.parse(file.read(path .. "/floppy.json"))
     local icon_id = math.random(0, 15)
-
-    -- if data.caption then
-    --     local new_data = {}
-
-    --     for i = 1, #data.caption, 1 do
-    --         new_data[i] = {
-    --             caption = data.caption[i],
-    --             name = data.name[i],
-    --             filename = data.filename[i]
-    --         }
-
-    --         file.write(path, json.tostring(new_data, true))
-    --     end
-
-    --     return
-    -- end
 
     for i = 1, #data, 1 do
         local floppy_data = data[i]
@@ -80,7 +69,7 @@ function manager.initialize()
                 local floppy_path = floppy_disks[j] .. "/floppy.json"
 
                 if file.exists(floppy_path) then
-                    load_floppy(floppy_disks[j])
+                    xpcall(load_floppy, error_handler, floppy_disks[j])
                 end
             end
         end

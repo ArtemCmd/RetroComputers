@@ -1,9 +1,9 @@
 local logger = require("dave_logger:logger")("RetroComputers")
 
 local blocks = {}
-local list
-local PATH = "world:data/retro_computers/blocks.json"
+local DATA_PATH = "world:data/retro_computers/blocks.json"
 local edited = false
+local data
 
 local function get_key(x, y, z)
     return string.format("%d:%d:%d", x, y, z)
@@ -11,24 +11,16 @@ end
 
 function blocks.registry(x, y, z, type)
     edited = true
-    list[get_key(x, y, z)] = {type = type or "unknown", fields = {}}
+    data[get_key(x, y, z)] = {type = type or "unknown", fields = {}}
 end
 
 function blocks.unregistry(x, y, z)
     edited = true
-    list[get_key(x, y, z)] = nil
-end
-
-function blocks.get(x, y, z)
-    return list[get_key(x, y, z)]
-end
-
-function blocks.get_blocks()
-    return list
+    data[get_key(x, y, z)] = nil
 end
 
 function blocks.get_field(x, y, z, name)
-    local blk = list[get_key(x, y, z)]
+    local blk = data[get_key(x, y, z)]
 
     if blk then
         return blk.fields[name]
@@ -36,7 +28,7 @@ function blocks.get_field(x, y, z, name)
 end
 
 function blocks.set_field(x, y, z, name, value)
-    local blk = list[get_key(x, y, z)]
+    local blk = data[get_key(x, y, z)]
 
     if blk then
         blk.fields[name] = value
@@ -44,24 +36,32 @@ function blocks.set_field(x, y, z, name, value)
     end
 end
 
+function blocks.get(x, y, z)
+    return data[get_key(x, y, z)]
+end
+
+function blocks.get_blocks()
+    return data
+end
+
 function blocks.initialize()
-    if file.exists(PATH) then
-        local success, result = pcall(json.parse, file.read(PATH))
+    if file.exists(DATA_PATH) then
+        local success, result = pcall(json.parse, file.read(DATA_PATH))
 
         if not success then
-            list = {}
-            logger:error("Blocks: Initialization errror: %s", result)
+            data = {}
+            logger:error("Blocks: Failed to load block data: %s", result)
         else
-            list = result
+            data = result
         end
     else
-        list = {}
+        data = {}
     end
 end
 
 function blocks.save()
     if edited then
-        file.write(PATH, json.tostring(list, false))
+        file.write(DATA_PATH, json.tostring(data, false))
     end
 end
 

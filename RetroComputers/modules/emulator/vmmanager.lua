@@ -14,9 +14,14 @@ end
 
 function vmmanager.initialize()
     if file.exists(DATA_PATH) then
-        local data = json.parse(file.read(DATA_PATH))
+        local success, result = pcall(function()
+            local data = json.parse(file.read(DATA_PATH))
+            next_id = data.next_id
+        end)
 
-        next_id = data.next_id
+        if not success then
+            logger:error("VMManager: Failed to load data: %s", result)
+        end
     end
 end
 
