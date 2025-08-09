@@ -1,7 +1,11 @@
 {
     "id": "retro_computers",
     "title": "RetroComputers",
-    "version": "0.7.1",
+    "version": "0.8.0",
     "creator": "Dave",
-    "description": "Контент-пак, добавляющий старые комплюктеры."
+    "description": "Контент-пак, добавляющий старые комплюктеры.",
+    "dependencies": [
+        "!dave_keyboard",
+        "!dave_logger"
+    ]
 }

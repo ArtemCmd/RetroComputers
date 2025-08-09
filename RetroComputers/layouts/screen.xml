@@ -1,7 +1,7 @@
 <container size='640, 230' gravity='center-center'>
     <container id='screen' size='640, 200' color='#000000FF'>
-        <canvas id='screen_graphics' size='640, 200'/>
-        <container id='screen_animation' size='640, 200' color='#000000FF'/>
+        <image id='screen_graphics' size='640, 200'/>
+        <container id='screen_animation' size='640, 200' z-index='999' color='#000000FF'/>
     </container>
 
     <container id='control_panel' pos='0, 600' size='535,30' color='#222121'>

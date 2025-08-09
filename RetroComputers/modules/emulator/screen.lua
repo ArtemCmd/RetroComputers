@@ -1,72 +1,76 @@
 local event = require("retro_computers:emulator/events")
 local band, bor, rshift, lshift, bxor = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor
 
-local display = {
+local screen = {
     EVENTS = {
-        SET_RESOLUTION = 0
+        SET_RESOLUTION = 1,
+        SET_SCALE = 2
     }
 }
 
-local function get_pixel(self, index)
+local function get_pixel_rgb_i(self, index)
     local offset = lshift(index, 2) + 1
 
-    return {self.buffer[offset], self.buffer[offset + 1], self.buffer[offset + 2], self.buffer[offset + 3]}
+    return bor(lshift(self.buffer[offset], 16), bor(lshift(self.buffer[offset + 1], 8), self.buffer[offset + 2]))
 end
 
-local function set_pixel(self, index, color)
+local function set_pixel_rgb_i(self, index, color)
     local offset = lshift(index, 2) + 1
 
-    self.buffer[offset] = color[1]
-    self.buffer[offset + 1] = color[2]
-    self.buffer[offset + 2] = color[3]
-    self.buffer[offset + 3] = color[4]
+    self.buffer[offset] = band(rshift(color, 16), 0xFF)
+    self.buffer[offset + 1] = band(rshift(color, 8), 0xFF)
+    self.buffer[offset + 2] = band(color, 0xFF)
+    self.buffer[offset + 3] = 0xFF
 end
 
 local function set_resolution(self, width, height)
+    if (self.width ~= width) or (self.height ~= height) then
+        for i = self.width * self.height * 4, width * height * 4, 1 do
+            self.buffer[i] = 0x000000
+        end
+    end
+
     self.width = width
     self.height = height
+    self.events:emit(screen.EVENTS.SET_RESOLUTION, width, height, self.scale_x, self.scale_y)
+end
 
-    self.events:emit(display.EVENTS.SET_RESOLUTION, width, height)
+local function set_scale(self, x, y)
+    self.scale_x = x
+    self.scale_y = y
+    self.events:emit(screen.EVENTS.SET_SCALE, x, y)
+end
+
+local function update(self)
 end
 
 local function reset(self)
-    self.width = 640
-    self.height = 200
-
     for i = 0, self.width * self.height * 4, 1 do
-        self.buffer[i] = 0
+        self.buffer[i] = 0x000000
     end
 end
 
-local function save_state(self, stream)
-    stream:write_uint32(2)
-    stream:write_uint16(self.width)
-    stream:write_uint16(self.height)
-end
-
-local function load_state(self, data)
-    self.width = bor(lshift(data[1], 8), data[2])
-    self.height = bor(lshift(data[3], 8), data[4])
-end
-
-function display.new()
+function screen.new()
     local self = {
         events = event.new(),
         buffer = {},
         width = 640,
         height = 200,
+        scale_x = 1.0,
+        scale_y = 1.0,
         reset = reset,
-        update = function() end,
+        update = update,
         set_resolution = set_resolution,
-        get_pixel = get_pixel,
-        set_pixel = set_pixel,
-        save_state = save_state,
-        load_state = load_state
+        set_scale = set_scale,
+        get_pixel_rgb_i = get_pixel_rgb_i,
+        set_pixel_rgb_i = set_pixel_rgb_i
     }
 
-    reset(self)
+    for i = 0, self.width * self.height * 4, 1 do
+        self.buffer[i] = 0x000000
+    end
 
     return self
 end
 
-return display
+return screen

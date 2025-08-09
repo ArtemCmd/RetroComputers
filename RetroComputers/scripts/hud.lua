@@ -12,7 +12,7 @@ function on_hud_open()
             console.log("Machine state:")
             console.log("   Enabled = " .. tostring(machine.enabled))
             console.log("   Focused = " .. tostring(machine.is_focused))
-            console.log("Installed components:")
+            console.log("Installed devices:")
 
             for key, value in pairs(machine.components) do
                 if type(value) == "table" then
@@ -31,30 +31,6 @@ function on_hud_open()
 
         for i, _ in pairs(machines) do
             console.log("   " .. i)
-        end
-    end)
-
-    console.add_command("retro_computers.vmmanager.save_state machine_id:int path:str", "Saves virtual machine state", function(args, kwargs)
-        local machine = vmmanager.get_machine(args[1])
-
-        if machine then
-            vmmanager.save_machine_state(machine, args[2])
-        else
-            console.log("Machine not found")
-        end
-    end)
-
-    console.add_command("retro_computers.vmmanager.load_state machine_id:int path:str", "Loads the virtual machine state", function(args, kwargs)
-        if file.exists(args[2]) then
-            local machine = vmmanager.get_machine(args[1])
-
-            if machine then
-                vmmanager.load_machine_state(machine, args[2])
-            else
-                console.log("Machine not found")
-            end
-        else
-            console.log("File not found")
         end
     end)
 

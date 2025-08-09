@@ -1,20 +1,11 @@
 {
+    "caption": "IBM PC/XT",
     "model": "custom",
-    "model-primitives": {
-        "aabbs": [
-            [0.0625, 0.0, 0.0625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
-            [0.84, 0.0, 0.0625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
-            [0.84, 0.0, 0.5625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
-            [0.0625, 0.0, 0.5625, 0.1, 0.0625, 0.1, "ibm_xt_noshki"],
-            [0.05, 0.0625, 0.0, 0.9, 0.3, 0.7, "ibm_xt_corpus"],
-            [0.2, 0.36, 0.05, 0.6, 0.5, 0.6, "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor", "ibm_xt_monitor_front"]
-        ]
-    },
+    "model-name": "ibm_xt",
     "rotation": "pane",
+    "ui-layout": "retro_computers:ibm_xt_inventory",
     "light-passing": true,
     "sky-light-passing": true,
     "hitbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
-    "ui-layout": "retro_computers:ibm_xt_inventory",
-    "inventory-size": 2,
-    "caption": "IBM PC/XT"
+    "inventory-size": 2
 }

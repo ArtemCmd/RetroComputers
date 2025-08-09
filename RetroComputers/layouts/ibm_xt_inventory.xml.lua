@@ -1,16 +1,15 @@
----@diagnostic disable: undefined-field, lowercase-global
-local logger = require("retro_computers:logger")
+local blocks = require("retro_computers:blocks")
 local vmmanager = require("retro_computers:emulator/vmmanager")
 local drive_manager = require("retro_computers:emulator/drive_manager")
 
-local function insert_drive(slot)
-    local machine = vmmanager.get_current_machine()
+local machine = nil
 
+local function insert_drive(slot)
     if machine then
         local item_name = item.name(inventory.get(hud.get_block_inventory(), slot))
-        local name = string.sub(string.split(item_name, ":")[2], 8, -1)
 
         if item_name ~= "core:empty" then
+            local name = string.sub(file.path(item_name), 8, -1)
             local floppy = drive_manager.get_floppy(name)
 
             if floppy then
@@ -19,8 +18,6 @@ local function insert_drive(slot)
         else
             machine:eject_floppy(slot)
         end
-    else
-        logger.error("Machine not found")
     end
 end
 
@@ -30,4 +27,14 @@ end
 
 function drive2_action()
     insert_drive(1)
+end
+
+function on_open(inv_id, x, y, z)
+    local machine_id = blocks.get_field(x, y, z, "vm_id")
+
+    machine = vmmanager.get_machine(machine_id)
+end
+
+function on_close()
+    machine = nil
 end

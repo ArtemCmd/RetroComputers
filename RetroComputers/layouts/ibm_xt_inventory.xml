@@ -1,7 +1,7 @@
 <inventory size='524, 120'>
     <slot pos='5, 5' index='0' updatefunc='drive1_action'/>
-    <label pos='60, 20'>Дисковод 1</label>
+    <label pos='60, 20'>@Drive 1</label>
 
     <slot pos='5, 65' index='1' updatefunc='drive2_action'/>
-    <label pos='60, 85'>Дисковод 2</label>
+    <label pos='60, 85'>@Drive 2</label>
 </inventory>

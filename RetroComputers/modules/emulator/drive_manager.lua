@@ -1,40 +1,11 @@
 ---@diagnostic disable: undefined-field
-local logger = require("retro_computers:logger")
+local logger = require("dave_logger:logger")("RetroComputers")
 
 local manager = {}
 local disks = {}
-
-local function pwrite(path, data)
-    local ok, result = pcall(file.write, path, data)
-
-    if not ok then
-        logger.error("DriveManager: Item creation failed, %s", path)
-    end
-end
+local count = 0
 
 local function add_floppy(path, packid, name, readonly, iconid, caption)
-    local item_path = packid .. ":items/floppy_" .. name .. ".json"
-
-    if not file.exists(item_path) then
-        local item = {
-            ["icon-type"] = "sprite",
-            ["icon"] = "items:floppy_" .. iconid,
-            ["stack-size"] = 1,
-            ["caption"] = caption,
-        }
-
-        if not file.is_writeable(item_path) then
-            -- :(
-            -- pack.request_writeable(packid, function(entry_point)
-            --     item_path = string.replace(item_path, packid, entry_point)
-            --     pwrite(item_path, json.tostring(item, true))
-            -- end)
-            -- pwrite("world:data/retro_computers/items/floppy_" .. name .. ".json", json.tostring(item, true))
-        else
-            pwrite(item_path, json.tostring(item, true))
-        end
-    end
-
     local floppy = {
         path = path,
         name = name,
@@ -42,14 +13,42 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
     }
 
     disks[name] = floppy
+    count = count + 1
 
-    logger.info("DriveManager: Floppy \"%s\" added", caption)
+    if not file.exists(string.format("%s:items/floppy_%s.json", packid, name)) then
+        local item = {
+            ["icon-type"] = "sprite",
+            ["icon"] = "items:floppy_" .. iconid,
+            ["stack-size"] = 1,
+            ["caption"] = caption
+        }
+
+        file.write(string.format("world:data/retro_computers/items/floppy_%s.json", name), json.tostring(item, true))
+    end
+
+    logger:info("DriveManager: Floppy \"%s\" loaded", caption)
 end
 
 local function load_floppy(path)
-    local packid = string.split(path, ":")[1]
+    local packid, _ = parse_path(path)
     local data = json.parse(file.read(path .. "/floppy.json"))
-    local icon_id = math.random(1, 6)
+    local icon_id = math.random(0, 15)
+
+    if data.caption then -- Converting
+        local new_data = {}
+
+        for i = 1, #data.caption, 1 do
+            new_data[i] = {
+                caption = data.caption[i],
+                name = data.name[i],
+                filename = data.filename[i]
+            }
+
+            file.write(path, json.tostring(new_data, true))
+        end
+
+        return
+    end
 
     for _, floppy in pairs(data) do
         local name = floppy.name
@@ -64,10 +63,11 @@ local function load_floppy(path)
     end
 end
 
-function manager.load()
-    logger.info("DriveManager: Loading floppy disks...")
+function manager.initialize()
+    logger:info("DriveManager: Loading floppy disks...")
 
     local packs = pack.get_installed()
+    local start_time = os.clock()
 
     for i = 1, #packs, 1 do
         local disks_path = packs[i] .. ":disks"
@@ -75,15 +75,17 @@ function manager.load()
         if file.exists(disks_path) then
             local floppy_disks = file.list(disks_path)
 
-            for i = 1, #floppy_disks, 1 do
-                local floppy_path = floppy_disks[i] .. "/floppy.json"
+            for j = 1, #floppy_disks, 1 do
+                local floppy_path = floppy_disks[j] .. "/floppy.json"
 
                 if file.exists(floppy_path) then
-                    load_floppy(floppy_disks[i])
+                    load_floppy(floppy_disks[j])
                 end
             end
         end
     end
+
+    logger:info("DriveManager: Loaded %d floppy disks in %d milliseconds", count, (os.clock() - start_time) * 1000)
 end
 
 function manager.get_floppy(name)

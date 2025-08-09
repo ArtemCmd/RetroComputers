@@ -1,53 +1,104 @@
-local logger = require("retro_computers:logger")
-
 local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
 
 local filesytem = {}
 local files = {}
 
-function filesytem.open(path, nocache)
-    local handler = {
+function filesytem.open(path, mode, nocache)
+    if (mode == "r") then
+        if  (not files[path]) and (not file.exists(path)) then
+            return nil
+        end
+    end
+
+    local stream = {
+        filename = path,
+        mode = mode,
         pos = 1,
+        advance = function(self, offset)
+            self.pos = self.pos + offset
+        end,
+        get_mode = function(self)
+            return self.mode
+        end,
+        get_filename = function(self)
+            return self.filename
+        end,
         get_position = function(self)
-            return self.pos
+            return self.pos - 1
         end,
         set_position = function(self, pos)
             self.pos = pos + 1
         end,
-        read = function(self)
+        read_byte = function(self)
             local byte =  self.buffer[self.pos]
             self.pos = self.pos + 1
             return byte
         end,
+        write_byte = function(self, byte)
+            self.buffer[self.pos] = byte
+            self.pos = self.pos + 1
+        end,
         read_bytes = function(self, count)
+            if not count then
+                return self.buffer
+            end
+
             local bytes = {}
 
-            for i = 1, count or #self.buffer, 1 do
+            for i = 1, count, 1 do
                 bytes[i] = self.buffer[self.pos]
                 self.pos = self.pos + 1
             end
 
             return bytes
         end,
-        read_uint16 = function(self, order)
-            local bytes = self:read_bytes(2)
+        write_bytes = function(self, bytes)
+            for i = 1, #bytes, 1 do
+                self.buffer[self.pos] = bytes[i]
+                self.pos = self.pos + 1
+            end
+        end,
+        read_uint16_l = function(self)
+            local low = self:read_byte()
+            local high = self:read_byte()
+            return bor(low, lshift(high, 8))
+        end,
+        write_uint16_l = function(self, val)
+            self:write_byte(band(val, 0xFF))
+            self:write_byte(band(rshift(val, 8), 0xFF))
+        end,
+        read_uint32_l = function(self)
+            local low = self:read_uint16_l()
+            local high = self:read_uint16_l()
+            return bor(low, lshift(high, 8))
+        end,
+        write_uint32_l = function(self, value)
+            self:write_byte(band(value, 0xFF))
+            self:write_byte(band(rshift(value, 8), 0xFF))
+            self:write_byte(band(rshift(value, 16), 0xFF))
+            self:write_byte(band(rshift(value, 24), 0xFF))
+        end,
+        read_string = function(self, count)
+            local result = {}
 
-            if order == "LE" then
-               return bor(bytes[1], lshift(bytes[2], 8))
+            for i = 1, count, 1 do
+                local byte = self:read()
+
+                if not byte then
+                    return table.concat(result)
+                end
+
+                result[i] = string.char(byte)
             end
 
-            return bor(bytes[2], lshift(bytes[1], 8))
+            return table.concat(result)
         end,
-        read_uint32 = function(self, order)
-            local bytes = self:read_bytes(4)
-
-            if order == "LE" then
-               return bor(bor(bor(bytes[1], lshift(bytes[2], 8)), lshift(bytes[3], 16)), lshift(bytes[4], 32))
+        write_string = function(self, str)
+            for i = 1, #str, 1 do
+                self:write_byte(string.byte(str:sub(i, i)))
             end
-
-            return bor(bor(bor(bytes[4], lshift(bytes[3], 8)), lshift(bytes[2], 16)), lshift(bytes[1], 32))
         end,
-        read_string = function(self)
+        read_asciiz = function(self)
             local result = {}
 
             while true do
@@ -66,79 +117,45 @@ function filesytem.open(path, nocache)
 
             return table.concat(result)
         end,
-        write = function(self, byte)
-            self.buffer[self.pos] = byte
-            self.pos = self.pos + 1
-        end,
-        write_bytes = function(self, bytes)
-            for i = 1, #bytes, 1 do
-                self.buffer[self.pos] = bytes[i]
-                self.pos = self.pos + 1
-            end
-        end,
-        write_uint16 = function(self, value, order)
-            if order == "LE" then
-                self:write(band(value, 0xFF))
-                self:write(rshift(value, 8))
-            else
-                self:write(rshift(value, 8))
-                self:write(band(value, 0xFF))
-            end
-        end,
-        write_uint32 = function(self, value, order)
-            if order == "LE" then
-                self:write(band(value, 0xFF))
-                self:write(band(rshift(value, 8), 0xFF))
-                self:write(band(rshift(value, 16), 0xFF))
-                self:write(band(rshift(value, 24), 0xFF))
-            else
-                self:write(band(rshift(value, 24), 0xFF))
-                self:write(band(rshift(value, 16), 0xFF))
-                self:write(band(rshift(value, 8), 0xFF))
-                self:write(band(value, 0xFF))
-            end
-        end,
-        write_string = function(self, str)
+        write_asciiz = function(self, str)
             for i = 1, #str, 1 do
-                self:write(string.byte(str:sub(i, i)))
+                self:write_byte(string.byte(str:sub(i, i)))
             end
 
-            self:write(0)
+            self:write_byte(0)
         end,
         flush = function(self)
             if file.is_writeable(path) then
-                file.write_bytes(path, self.buffer)
+                file.write_bytes(self.filename, self.buffer)
             end
         end,
         close = function(self)
             self:flush()
             files[path] = nil
-        end,
-        get_buffer = function(self)
-            return self.buffer
         end
     }
 
-    if files[path] then
-        handler.buffer = files[path]
-    elseif file.exists(path) then
-        local ok, result = pcall(file.read_bytes, path)
-
-        if ok then
-            handler.buffer = result
+    if mode == "w" then
+        stream.buffer = {}
+    elseif mode == "r" then
+        if files[path] then
+            stream.buffer = files[path]
         else
-            return nil
-        end
+            local ok, result = pcall(file.read_bytes, path)
 
-    else
-        handler.buffer = {}
+            if ok then
+                stream.buffer = result
+            else
+                return nil
+            end
+        end
     end
 
     if (not nocache) and (not files[path]) then
-        files[path] = handler.buffer
+        files[path] = stream.buffer
     end
 
-    return handler
+    return stream
 end
 
 return filesytem

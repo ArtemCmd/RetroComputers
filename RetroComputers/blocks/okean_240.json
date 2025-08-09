@@ -1,0 +1,9 @@
+{
+    "caption": "Okean 240",
+	"model": "custom",
+    "model-name": "okean_240",
+    "rotation": "pane",
+    "light-passing": true,
+    "sky-light-passing": true,
+    "hitbox": [0.0, 0.0, 0.0, 1.0, 0.1, 0.5]
+}

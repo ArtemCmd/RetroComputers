@@ -1,11 +1,6 @@
 {
-  "textures": [
-    "gui/keyboard",
-    "gui/screen"
-  ],
   "sounds": [
     "computer/beep",
-    "computer/running",
     "computer/keyboard"
   ]
 }
