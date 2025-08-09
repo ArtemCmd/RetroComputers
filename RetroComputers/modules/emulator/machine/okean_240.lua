@@ -191,7 +191,6 @@ function machine.new(machine_id)
     self.devices.pic = require("retro_computers:emulator/hardware/i8259").new(self.devices.cpu, 0x80)
     self.devices.pit = require("retro_computers:emulator/hardware/i8253").new(self.devices.cpu, 0x60)
     self.devices.screen = require("retro_computers:emulator/screen").new()
-    self.devices.pc_speaker = require("retro_computers:emulator/hardware/sound/pc_speaker").new(self.devices.pit)
     self.devices.videocard = require("retro_computers:emulator/hardware/video/okean").new(self.devices.cpu, self.devices.screen)
     self.devices.keyboard = require("retro_computers:emulator/hardware/keyboard/keyboard_okean").new(self.devices.cpu, self.devices.pic, self)
 

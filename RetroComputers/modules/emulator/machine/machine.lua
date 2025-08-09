@@ -13,6 +13,10 @@ function machine:get_device(name)
     return self.devices[name]
 end
 
+function machine:get_devices(name)
+    return self.devices
+end
+
 function machine:set_device(name, device)
     self.devices[name] = device
 end
