@@ -1,3 +1,5 @@
+local logger = require("dave_logger:logger")("RetroComputers")
+
 local blocks = {}
 local list
 local PATH = "world:data/retro_computers/blocks.json"
@@ -44,7 +46,14 @@ end
 
 function blocks.initialize()
     if file.exists(PATH) then
-        list = json.parse(file.read(PATH))
+        local success, result = pcall(json.parse, file.read(PATH))
+
+        if not success then
+            list = {}
+            logger:error("Blocks: Initialization errror: %s", result)
+        else
+            list = result
+        end
     else
         list = {}
     end
