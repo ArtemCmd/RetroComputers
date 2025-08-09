@@ -10,7 +10,6 @@ end
 local function remove_memory_map(self, addr, size)
 end
 
-
 local function read8(self, addr)
     return self.data[band(addr, self.mask)]
 end

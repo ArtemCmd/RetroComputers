@@ -15,46 +15,47 @@ local function add_floppy(path, packid, name, readonly, iconid, caption)
     disks[name] = floppy
     count = count + 1
 
-    if not file.exists(string.format("%s:items/floppy_%s.json", packid, name)) then
-        local item = {
-            ["icon-type"] = "sprite",
-            ["icon"] = "items:floppy_" .. iconid,
-            ["stack-size"] = 1,
-            ["caption"] = caption
-        }
+    -- if not file.exists(string.format("%s:items/floppy_%s.json", packid, name)) then
+    --     local item = {
+    --         ["icon-type"] = "sprite",
+    --         ["icon"] = "items:floppy_" .. iconid,
+    --         ["stack-size"] = 1,
+    --         ["caption"] = caption
+    --     }
 
-        file.write(string.format("world:data/retro_computers/items/floppy_%s.json", name), json.tostring(item, true))
-    end
+    --     file.write(string.format("world:data/retro_computers/items/floppy_%s.json", name), json.tostring(item, true))
+    -- end
 
     logger:info("DriveManager: Floppy \"%s\" loaded", caption)
 end
 
 local function load_floppy(path)
-    local packid, _ = parse_path(path)
+    local packid = file.prefix(path)
     local data = json.parse(file.read(path .. "/floppy.json"))
     local icon_id = math.random(0, 15)
 
-    if data.caption then -- Converting
-        local new_data = {}
+    -- if data.caption then
+    --     local new_data = {}
 
-        for i = 1, #data.caption, 1 do
-            new_data[i] = {
-                caption = data.caption[i],
-                name = data.name[i],
-                filename = data.filename[i]
-            }
+    --     for i = 1, #data.caption, 1 do
+    --         new_data[i] = {
+    --             caption = data.caption[i],
+    --             name = data.name[i],
+    --             filename = data.filename[i]
+    --         }
 
-            file.write(path, json.tostring(new_data, true))
-        end
+    --         file.write(path, json.tostring(new_data, true))
+    --     end
 
-        return
-    end
+    --     return
+    -- end
 
-    for _, floppy in pairs(data) do
-        local name = floppy.name
-        local caption = floppy.caption or name
-        local filename = floppy.filename or "floppy.img"
-        local readonly = floppy.readonly or false
+    for i = 1, #data, 1 do
+        local floppy_data = data[i]
+        local name = floppy_data.name
+        local caption = floppy_data.caption or name
+        local filename = floppy_data.filename or "floppy.img"
+        local readonly = floppy_data.readonly or false
         local floppy_path = path .. "/" .. filename
 
         if file.exists(floppy_path) then

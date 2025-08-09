@@ -26,7 +26,11 @@ function config.initialize()
     elseif file.exists(global_path) then
         data = toml.parse(file.read(global_path))
     else
-        file.write(global_path, default)
+        local success, reason = pcall(file.write, global_path, default)
+
+        if not success then
+            logger:error("Config: Creating error: %s", reason)
+        end
     end
 
     table.merge(data, default_data)
