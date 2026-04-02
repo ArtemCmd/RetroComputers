@@ -1,3 +1,4 @@
+local logger = require("dave_logger:logger")("RetroComputers")
 local common = require("retro_computers:machine/machine")
 local config = require("retro_computers:config")
 local util = require("retro_computers:util")
@@ -50,7 +51,11 @@ local function start(self)
 
         -- Setup HDD
         for i = 0, config.machine.ibm_xt.hdc.hdd_count - 1, 1 do
-            self.devices.hdc:insert_drive(i, create_hdd(self, i))
+            local success, message = pcall(self.devices.hdc.insert_drive, self.devices.hdc, i, create_hdd(self, i))
+
+            if not success then
+                logger:error("IBM PC/XT: Failed to load disk image: %s", message)
+            end
         end
 
         -- Initialize devices
