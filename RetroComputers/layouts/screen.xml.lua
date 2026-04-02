@@ -1,8 +1,7 @@
----@diagnostic disable: undefined-field
 local logger = require("dave_logger:logger")("RetroComputers")
-local blocks = require("retro_computers:blocks")
-local vmmanager = require("retro_computers:emulator/vmmanager")
-local input_manager = require("retro_computers:emulator/input_manager")
+local config = require("retro_computers:config")
+local input_manager = require("retro_computers:input_manager")
+local vmmanager = require("retro_computers:vmmanager")
 
 local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
 
@@ -17,10 +16,18 @@ local start_animation = false
 local alpha_animation = 255
 local initialized = false
 
+-- Debug
+local last_time = 0
+local fps = 0
+
 -- Machine
 local mx, my, mz
 local machine = nil
 local events_ids = {}
+local key_matrix = {}
+local key_time = 0
+local device_keyboard
+local device_mouse
 
 -- Keyboard
 local left_shift = false
@@ -89,35 +96,49 @@ local char2key = {
     ["="] = "key:equal"
 }
 
-local function refresh(screen)
-    local canvas = document.screen_graphics.data
+local canvas = Canvas({640, 200})
 
+local function update()
     if start_animation then
         local animation = document.screen_animation
 
         animation.color = {0, 0, 0, alpha_animation}
-        alpha_animation = alpha_animation - (20 * time.delta())
+        alpha_animation = alpha_animation - (60 * time.delta())
 
         if alpha_animation < 0 then
             start_animation = false
             alpha_animation = 255
         end
+    else
+        document.screen_animation:setInterval(1000000, function()end)
+        document.screen_animation.visible = false
     end
+end
 
+local function refresh(screen)
     canvas:set_data(screen.buffer)
     canvas:update()
 end
 
+local function refresh_debug(screen)
+    if (os.clock() - last_time) >= 1.0 then
+        document.fps_counter.text = string.format("FPS: %d", fps)
+        fps = 0
+        last_time = os.clock()
+    end
+
+    canvas:set_data(screen.buffer)
+    canvas:update()
+
+    fps = fps + 1
+end
+
 local function set_canvas_resolution(width, height)
     if (canvas_width ~= width) or (canvas_height ~= height) then
-        local screen_graphics = document.screen_graphics
-        local screen = document.screen
-
-        screen_graphics:destruct()
-        screen:add(string.format("<canvas id='screen_graphics' size='%d, %d'/>", width, height))
-
         canvas_width = width
         canvas_height = height
+        canvas = Canvas({width, height})
+        canvas:create_texture("gui/screen")
     end
 end
 
@@ -151,17 +172,21 @@ end
 
 local function send_key(key)
     local scancode = input_manager.get_scancode(key) or 0x00
----@diagnostic disable-next-line: need-check-nil
+---@diagnostic disable-next-line: need-check-nil, undefined-field
     local keyboard = machine:get_device("keyboard")
 
+    if not keyboard.push_key then
+        return
+    end
+
     if left_shift then
-        keyboard:send_key(0x2A)
-        keyboard:send_key(scancode)
-        keyboard:send_key(bor(0x80, scancode))
-        keyboard:send_key(0xAA)
+        keyboard:push_key(0x2A)
+        keyboard:push_key(scancode)
+        keyboard:push_key(bor(0x80, scancode))
+        keyboard:push_key(0xAA)
     else
-        keyboard:send_key(scancode)
-        keyboard:send_key(bor(0x80, scancode))
+        keyboard:push_key(scancode)
+        keyboard:push_key(bor(0x80, scancode))
     end
 
     if scancode == 0x2A then
@@ -183,6 +208,7 @@ function start_vm()
 
             machine:start()
             start_animation = true
+            document.screen_animation:setInterval(100, update)
 
             set_canvas_resolution(screen.width, screen.height)
             set_resolution(screen.width, screen.height, screen.scale_x, screen.scale_y)
@@ -201,13 +227,13 @@ function send_ctrl_alt_del()
     if machine then
         local keyboard = machine:get_device("keyboard")
 
-        if keyboard then
-            keyboard:send_key(0x1D)
-            keyboard:send_key(0x38)
-            keyboard:send_key(0x53)
-            keyboard:send_key(0x9D)
-            keyboard:send_key(0xB8)
-            keyboard:send_key(0xD3)
+        if keyboard and keyboard.push_key then
+            keyboard:push_key(0x1D)
+            keyboard:push_key(0x38)
+            keyboard:push_key(0x53)
+            keyboard:push_key(0x9D)
+            keyboard:push_key(0xB8)
+            keyboard:push_key(0xD3)
         end
     end
 end
@@ -219,6 +245,13 @@ end
 function on_open(_, x, y, z)
     if not initialized then
         initialized = true
+
+        if config.debug.show_fps then
+            document.fps_counter.visible = true
+            refresh = refresh_debug
+        else
+            document.fps_counter.visible = false
+        end
 
         events.on("dave_keyboard:keyboard.close", function()
             input_manager.set_enabled(true)
@@ -249,12 +282,46 @@ function on_open(_, x, y, z)
                 end
             end
         end)
+
+        events.on("retro_computers:input_manager.key_down",  function(key, code)
+            if (not device_keyboard) or config.input.ignore_keys[key] then
+                return
+            end
+
+            if key_matrix[code] then
+                if time.uptime() > key_time then
+                    device_keyboard:send(code)
+                end
+            else
+                device_keyboard:send(code)
+
+                key_matrix[code] = true
+                key_time = time.uptime() + 0.5
+            end
+        end)
+
+        events.on("retro_computers:input_manager.key_up", function(key, code)
+            if (not device_keyboard) or config.input.ignore_keys[key] then
+                return
+            end
+
+            audio.play_sound_2d("computer/keyboard", 1.0, 1.0)
+            device_keyboard:send(bor(code, 0x80))
+
+            key_matrix[code] = false
+        end)
+
+        events.on("retro_computers:input_manager.mouse_state_changed", function(delta_x, delta_y, left_pressed, middle_pressed, right_pressed)
+            if device_mouse then
+                device_mouse:update_mouse_state(delta_x, delta_y, left_pressed, middle_pressed, right_pressed)
+            end
+        end)
     end
 
-    local machine_id = blocks.get_field(x, y, z, "vm_id")
+    local machine_id = block.get_field(x, y, z, "vm_id")
 
     if machine_id then
-        machine = vmmanager.get_machine(machine_id)
+        machine = vmmanager.get_machine_by_id(machine_id)
 
         if machine then
             local screen = machine:get_device("screen")
@@ -277,7 +344,9 @@ function on_open(_, x, y, z)
 
             input_manager.set_enabled(true)
             mx, my, mz = x, y, z
-            machine.is_focused = true
+
+            device_keyboard = machine:get_device("keyboard")
+            device_mouse = machine:get_device("mouse")
 
             refresh(machine:get_device("screen"))
         else
@@ -299,7 +368,9 @@ function on_close()
             screen.events:remove_handler(2, table.remove(events_ids))
         end
 
-        machine.is_focused = false
+        device_keyboard = nil
+        device_mouse = nil
+
         machine = nil
     end
 

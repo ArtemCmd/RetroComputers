@@ -1,3 +1,10 @@
+# Items
+floppy empty=Дискета
+
+# GUI
 Okean 240=Океан 240
 Drive 1=Дисковод 1
 Drive 2=Дисковод 2
+Keyboard=Клавиатура
+Open inventory=Открыть инвентарь
+Send CTRL+ALT+DEL=Послать CTRL+ALT+DEL

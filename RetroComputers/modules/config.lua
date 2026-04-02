@@ -1,4 +1,3 @@
----@diagnostic disable: undefined-field
 local logger = require("dave_logger:logger")("RetroComputers")
 
 local config = {}
@@ -6,18 +5,8 @@ local config = {}
 local global_path = "config:retro_computers/config.toml"
 local local_path = "world:retro_computers/config.toml"
 
-local default = [==[
-[machine.ibm_xt]
-video = "cga"
-postcard = false
-[[machine.ibm_xt.rom]]
-filename = "GLABIOS_0.2.6_8E.ROM"
-addr = 0xFE000
-]==]
-
 local function error_handler(message)
-    logger:error("Config: Failed to load config file: %s", message)
-    print(debug.traceback())
+    logger:error("Config: Failed to load config file: %s\n%s", message, debug.traceback())
 end
 
 local function merge(table1, table2)
@@ -36,9 +25,12 @@ end
 
 function config.initialize()
     local data = {}
+    local default = file.read("retro_computers:default.toml")
     local default_data = toml.parse(default)
 
     logger:info("Config: Loading...")
+
+    local start = os.clock()
 
     xpcall(function()
         if file.exists(local_path) then
@@ -49,6 +41,8 @@ function config.initialize()
             file.write(global_path, default)
         end
     end, error_handler)
+
+    logger:info("Config: Loaded in %d milliseconds", (os.clock() - start) * 1000)
 
     merge(data, default_data)
     table.merge(config, data)

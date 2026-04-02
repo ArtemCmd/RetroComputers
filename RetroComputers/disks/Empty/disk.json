@@ -1,0 +1,14 @@
+[
+    {
+        "type": "floppy",
+        "caption": "Empty",
+        "name": "empty",
+        "filename": "floppy.img"
+    },
+    {
+        "type": "tape",
+        "caption": "Empty",
+        "name": "empty",
+        "filename": "empty.wav"
+    }
+]

@@ -1,6 +1,7 @@
 {
   "sounds": [
-    "computer/beep",
+    "computer/floppy_insert",
+    "computer/floppy_eject",
     "computer/keyboard"
   ]
 }

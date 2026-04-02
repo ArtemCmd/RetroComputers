@@ -1,36 +1,175 @@
-@box from (0.000000, 0.000000, 0.000000) to (1.000000, 0.100000, 0.500000) texture "blocks:okean_240_corpus" {
-    @part tags (top) region (1, 1, 0, 0) region-scale (1.0, 1.0) texture "blocks:okean_240_top"
+# Monitor
+@box from (0.250, 0.100, 0.050) to (0.750, 0.500, 0.100) texture "blocks:okean_240" {
+    @part tags (top) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (bottom) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (south) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (north) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (east) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (west) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
 }
 
-@box from (0.033000, 0.100000, 0.220000) to (0.133000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.153000, 0.100000, 0.220000) to (0.253000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.273000, 0.100000, 0.220000) to (0.373000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.393000, 0.100000, 0.220000) to (0.493000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.513000, 0.100000, 0.220000) to (0.613000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.633000, 0.100000, 0.220000) to (0.733000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.753000, 0.100000, 0.220000) to (0.853000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.873000, 0.100000, 0.220000) to (0.973000, 0.110000, 0.270000) texture "blocks:okean_240_button"
-@box from (0.033000, 0.100000, 0.290000) to (0.133000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.153000, 0.100000, 0.290000) to (0.253000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.273000, 0.100000, 0.290000) to (0.373000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.393000, 0.100000, 0.290000) to (0.493000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.513000, 0.100000, 0.290000) to (0.613000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.633000, 0.100000, 0.290000) to (0.733000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.753000, 0.100000, 0.290000) to (0.853000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.873000, 0.100000, 0.290000) to (0.973000, 0.110000, 0.340000) texture "blocks:okean_240_button"
-@box from (0.033000, 0.100000, 0.360000) to (0.133000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.153000, 0.100000, 0.360000) to (0.253000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.273000, 0.100000, 0.360000) to (0.373000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.393000, 0.100000, 0.360000) to (0.493000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.513000, 0.100000, 0.360000) to (0.613000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.633000, 0.100000, 0.360000) to (0.733000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.753000, 0.100000, 0.360000) to (0.853000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.873000, 0.100000, 0.360000) to (0.973000, 0.110000, 0.410000) texture "blocks:okean_240_button"
-@box from (0.033000, 0.100000, 0.430000) to (0.133000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.153000, 0.100000, 0.430000) to (0.253000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.273000, 0.100000, 0.430000) to (0.373000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.393000, 0.100000, 0.430000) to (0.493000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.513000, 0.100000, 0.430000) to (0.613000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.633000, 0.100000, 0.430000) to (0.733000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.753000, 0.100000, 0.430000) to (0.853000, 0.110000, 0.480000) texture "blocks:okean_240_button"
-@box from (0.873000, 0.100000, 0.430000) to (0.973000, 0.110000, 0.480000) texture "blocks:okean_240_button"
+@box from (0.250, 0.000, 0.100) to (0.750, 0.100, 0.490) texture "blocks:okean_240" {
+    @part tags (top) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (bottom) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (south) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (north) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (east) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (west) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+}
+
+@box from (0.200, 0.100, 0.100) to (0.800, 0.600, 0.500) texture "blocks:okean_240" {
+    @part tags (north) region (1, 1, 0.5, 0.5) region-scale (1, 1)
+    @part tags (bottom) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (south) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (top) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (east) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (west) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+}
+
+@box from (0.270, 0.000, 0.490) to (0.280, 0.010, 0.600) texture "blocks:okean_240" {
+    @part tags (north) region (1, 1, 0.5, 0.5) region-scale (1, 1)
+    @part tags (bottom) region(1, 1, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (south) region(1, 1, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (top) region(1, 1, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (east) region(1, 1, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (west) region(1, 1, 0.5, 0.5) region-scale(0.0, 0.5)
+}
+
+# Okean 240
+@box from (0.000, 0.000, 0.600) to (1.000, 0.100, 1.000) texture "blocks:okean_240" {
+    @part tags (top) region (1, 0.5, 0, 0) region-scale (1.0, 0.8) texture "blocks:okean_240"
+    @part tags (bottom) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (south) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (north) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (east) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+    @part tags (west) region(1, 0, 0.5, 0.5) region-scale(0.0, 0.5)
+}
+
+@box from (0.033, 0.100, 0.720) to (0.133, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.153, 0.100, 0.720) to (0.253, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.273, 0.100, 0.720) to (0.373, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.393, 0.100, 0.720) to (0.493, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.513, 0.100, 0.720) to (0.613, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.633, 0.100, 0.720) to (0.733, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.753, 0.100, 0.720) to (0.853, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.873, 0.100, 0.720) to (0.973, 0.110, 0.770) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.033, 0.100, 0.790) to (0.133, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.153, 0.100, 0.790) to (0.253, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.273, 0.100, 0.790) to (0.373, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.393, 0.100, 0.790) to (0.493, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.513, 0.100, 0.790) to (0.613, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.633, 0.100, 0.790) to (0.733, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.753, 0.100, 0.790) to (0.853, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.873, 0.100, 0.790) to (0.973, 0.110, 0.840) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.033, 0.100, 0.860) to (0.133, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.153, 0.100, 0.860) to (0.253, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.273, 0.100, 0.860) to (0.373, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.393, 0.100, 0.860) to (0.493, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.513, 0.100, 0.860) to (0.613, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.633, 0.100, 0.860) to (0.733, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.753, 0.100, 0.860) to (0.853, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.873, 0.100, 0.860) to (0.973, 0.110, 0.910) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.033, 0.100, 0.930) to (0.133, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.153, 0.100, 0.930) to (0.253, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.273, 0.100, 0.930) to (0.373, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.393, 0.100, 0.930) to (0.493, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.513, 0.100, 0.930) to (0.613, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.633, 0.100, 0.930) to (0.733, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.753, 0.100, 0.930) to (0.853, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+
+@box from (0.873, 0.100, 0.930) to (0.973, 0.110, 0.980) texture "blocks:okean_240" {
+    @part tags (top, bottom, south, north, east, west) region (0, 1, 0, 1)
+}
+

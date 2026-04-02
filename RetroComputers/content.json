@@ -1,13 +1,14 @@
 {
-  "blocks": [
-    "ibm_xt",
-    "okean_240"
-  ],
+  "entities": [],
   "items": [
     "floppy_ELKS",
     "floppy_empty",
     "floppy_pcdos_330_1",
-    "floppy_pcdos_330_2"
+    "floppy_pcdos_330_2",
+    "tape_empty"
   ],
-  "entities": []
+  "blocks": [
+    "ibm_xt",
+    "okean_240"
+  ]
 }

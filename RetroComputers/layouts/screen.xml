@@ -1,13 +1,14 @@
 <container size='640, 230' gravity='center-center'>
     <container id='screen' size='640, 200' color='#000000FF'>
-        <image id='screen_graphics' size='640, 200'/>
+        <image id='screen_graphics' src='gui/screen' size='640, 200' region='0.0, 1.0, 1.0, 0.0'/>
         <container id='screen_animation' size='640, 200' z-index='999' color='#000000FF'/>
+        <label id='fps_counter' z-index='9999' color='#FF0000FF'>FPS: 0</label>
     </container>
 
     <container id='control_panel' pos='0, 600' size='535,30' color='#222121'>
         <button pos='5, 5' size='80, 20' onclick='start_vm()'>Вкл/Выкл</button>
-        <button pos='90, 5' size='170, 20' onclick='send_ctrl_alt_del()'>Послать CTRL+ALT+DEL</button>
-        <button pos='265, 5' size='170, 20' onclick='open_inventory()'>Открыть инвентарь</button>
-        <button pos='440, 5' size='90, 20' onclick='show_keyboard()'>Клавиатура</button>
+        <button pos='90, 5' size='170, 20' onclick='send_ctrl_alt_del()'>@Send CTRL+ALT+DEL</button>
+        <button pos='265, 5' size='170, 20' onclick='open_inventory()'>@Open inventory</button>
+        <button pos='440, 5' size='90, 20' onclick='show_keyboard()'>@Keyboard</button>
     </container>
 </container>

@@ -3,9 +3,10 @@
     "model": "custom",
     "model-name": "ibm_xt",
     "rotation": "pane",
-    "ui-layout": "retro_computers:ibm_xt_inventory",
     "light-passing": true,
     "sky-light-passing": true,
-    "hitbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
-    "inventory-size": 2
+    "inventory-size": 2,
+    "fields": {
+        "vm_id": {"type": "int32", "convert-strategy": "clamp"}
+    }
 }
