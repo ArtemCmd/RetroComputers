@@ -35,11 +35,33 @@ local LPT_IRQS = {7}
 local SERIAL_PORTS = {0x3F8}
 local SERIAL_IRQS = {4}
 
+local function parse_geometry(str)
+    local result = {}
+    local pos = 1
+
+    for i = 1, #str, 1 do
+        if string.sub(str, i, i) == "/" then
+            result[#result+1] = tonumber(string.sub(str, pos, i - 1), 10)
+            pos = i + 1
+        elseif i == #str then
+            result[#result+1] = tonumber(string.sub(str, pos, i), 10)
+        end
+    end
+
+    return result
+end
+
+local HDD_GEOMETRY = {
+    parse_geometry(config.machine.ibm_xt.hdc.hdd[1].geometry),
+    parse_geometry(config.machine.ibm_xt.hdc.hdd[2].geometry)
+}
+
 local function create_hdd(self, index)
     local hdd_path = vmmanager.get_machine_path(self.id, string.format("hdd%d.hdf", index + 1))
 
     if not file.exists(hdd_path) then
-        emu_api.file_formats.hdf.create(hdd_path, 615, 4, 17, 512, true)
+        local geometry = HDD_GEOMETRY[index + 1]
+        emu_api.file_formats.hdf.create(hdd_path, geometry[1], geometry[2], geometry[3], 512, true)
     end
 
     return hdd_path
@@ -50,7 +72,7 @@ local function start(self)
         self:reset()
 
         -- Setup HDD
-        for i = 0, config.machine.ibm_xt.hdc.hdd_count - 1, 1 do
+        for i = 0, math.min(config.machine.ibm_xt.hdc.hdd_count, 2) - 1, 1 do
             local success, message = pcall(self.devices.hdc.insert_drive, self.devices.hdc, i, create_hdd(self, i))
 
             if not success then
@@ -221,7 +243,7 @@ function machine.new(id)
     self.devices.pit = device_manager.create("i8253", self.devices.cpu, 0x40)
     self.devices.dma = device_manager.create("i8237", self.devices.cpu, self.devices.memory)
     self.devices.fdc = device_manager.create("fdc", self.devices.cpu, self.devices.pic, self.devices.dma)
-    self.devices.hdc = device_manager.create("st506", self.devices.cpu, self.devices.memory, self.devices.pic, self.devices.dma)
+    self.devices.hdc = device_manager.create(config.machine.ibm_xt.hdc.controller, self.devices.cpu, self.devices.memory, self.devices.pic, self.devices.dma)
     self.devices.lpt = device_manager.create("lpt", self.devices.cpu, self.devices.pic, LPT_PORTS, LPT_IRQS)
     self.devices.pc_speaker = device_manager.create("pc_speaker", self.devices.pit, self.devices.cpu)
     self.devices.mouse = device_manager.create("mouse_bus", self.devices.cpu, self.devices.pic, 0x23C, 4)

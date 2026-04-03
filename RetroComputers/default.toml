@@ -16,7 +16,16 @@ addr = 0xFE000
 
 [machine.ibm_xt.hdc]
 
+controller = "st506"
 hdd_count = 1
+
+[[machine.ibm_xt.hdc.hdd]]
+
+geometry = "615/4/17"
+
+[[machine.ibm_xt.hdc.hdd]]
+
+geometry = "615/4/17"
 
 #====================================================================================================================================
 # Input System.
