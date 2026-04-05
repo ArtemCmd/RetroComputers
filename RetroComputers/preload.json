@@ -2,6 +2,9 @@
   "sounds": [
     "computer/floppy_insert",
     "computer/floppy_eject",
+    "computer/fdd_start",
+    "computer/fdd_loop",
+    "computer/fdd_stop",
     "computer/keyboard"
   ]
 }

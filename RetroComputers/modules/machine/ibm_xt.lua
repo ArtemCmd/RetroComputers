@@ -56,6 +56,33 @@ local HDD_GEOMETRY = {
     parse_geometry(config.machine.ibm_xt.hdc.hdd[2].geometry)
 }
 
+local FDC_DRIVE_VOLUME = 5.0
+local FDC_DRIVE_HANDLER = {
+    start_motor = function(self, drive_id)
+        if not self.host then
+            return
+        end
+
+        audio.play_sound("computer/fdd_start", self.host.x, self.host.y, self.host.z, FDC_DRIVE_VOLUME, 1.0, "regular", false)
+
+        local scheduler = self.devices.cpu.scheduler
+        local timer = scheduler:add(function()
+            self.host.motor_loop[drive_id] = audio.play_sound("computer/fdd_loop", self.host.x, self.host.y, self.host.z, FDC_DRIVE_VOLUME, 1.0, "regular", true)
+        end, nil, false)
+
+        timer:set_delay(3 * CPU_FREQ)
+    end,
+    stop_motor = function(self, drive_id)
+        if not self.host then
+            return
+        end
+
+        audio.stop(self.host.motor_loop[drive_id])
+        audio.play_sound("computer/fdd_stop", self.host.x, self.host.y, self.host.z, FDC_DRIVE_VOLUME, 1.0, "regular", false)
+    end
+}
+FDC_DRIVE_HANDLER.__index = FDC_DRIVE_HANDLER
+
 local function create_hdd(self, index)
     local hdd_path = vmmanager.get_machine_path(self.id, string.format("hdd%d.hdf", index + 1))
 
@@ -286,6 +313,11 @@ function machine.new(id)
             self.devices.dma:channel_read(0)
         end
     end)
+
+    local handler = setmetatable({arg = self}, FDC_DRIVE_HANDLER)
+
+    self.devices.fdc:set_drive_callbacks(0, handler)
+    self.devices.fdc:set_drive_callbacks(1, handler)
 
     self.devices.cpu:set_clock(CPU_CLOCK)
     self.devices.keyboard:set_clock()
