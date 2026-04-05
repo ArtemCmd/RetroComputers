@@ -2,6 +2,7 @@ local vmmanager = require("retro_computers:vmmanager")
 local drive_manager = require("retro_computers:drive_manager")
 
 local machine = nil
+local entry_points = {}
 
 local function insert_drive(slot)
     if machine then
@@ -10,12 +11,23 @@ local function insert_drive(slot)
         if item_name ~= "core:empty" then
             local name = string.gsub(item_name, "floppy_", "", 1)
             local floppy = drive_manager.get_floppy(name)
+            local pack_id, filename = parse_path(floppy.path)
 
-            if floppy then
+            if floppy.readonly or file.is_writeable(floppy.path) then
                 machine:insert_floppy(floppy, slot)
+                audio.play_sound_2d("computer/floppy_insert", 1.0, 1.0, "regular", false)
+            elseif entry_points[pack_id] ~= nil then
+                floppy.path = string.format("%s:%s", entry_points[pack_id], filename)
+                machine:insert_floppy(floppy, slot)
+                audio.play_sound_2d("computer/floppy_insert", 1.0, 1.0, "regular", false)
+            else
+                pack.request_writeable(pack_id, function(entry_point)
+                    entry_points[pack_id] = entry_point
+                    floppy.path = string.format("%s:%s", entry_point, filename)
+                    machine:insert_floppy(floppy, slot)
+                    audio.play_sound_2d("computer/floppy_insert", 1.0, 1.0, "regular", false)
+                end)
             end
-
-            audio.play_sound_2d("computer/floppy_insert", 1.0, 1.0, "regular", false)
         else
             machine:eject_floppy(slot)
             audio.play_sound_2d("computer/floppy_eject", 1.0, 1.0, "regular", false)
