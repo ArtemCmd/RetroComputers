@@ -1,26 +1,126 @@
-# Corpus
-@box from (0.05, 0.0625, 0.0) to (0.95, 0.3625, 0.7) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, north, west, south) region (0, 0.9921875, 1, 1) region-scale (1.0, 1.0)
+@bone move (0.5, 0, 0.5) {
+    @box from (-0.4375, 0.3125, -0.3125) to (0.125, 0.75, 0.3125) origin (0, 0, 0) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.125, 0.59375, 0.15625, 0.625)
+        @part tags (west) texture "blocks:ibm_xt" region (0, 0.375, 0.28125, 0.59375)
+        @part tags (north) texture "blocks:ibm_xt" region (0.09375, 0.59375, 0.125, 0.625)
+        @part tags (east) texture "blocks:ibm_xt" region (0.09375, 0.59375, 0.0625, 0.625)
+        @part tags (top) texture "blocks:ibm_xt" region (0.0625, 0.625, 0.03125, 0.59375)
+        @part tags (bottom) texture "blocks:ibm_xt" region (0.03125, 0.59375, 0, 0.625)
+    }
+    @box from (0, 0.28125, 0.1875) to (0.0625, 0.3125, 0.25) origin (0, 0, 0) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (-0.375, 0.28125, 0.1875) to (-0.3125, 0.3125, 0.25) origin (0, 0, 0) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (-0.375, 0.28125, -0.25) to (-0.3125, 0.3125, -0.1875) origin (0, 0, 0) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (0, 0.28125, -0.25) to (0.0625, 0.3125, -0.1875) origin (0, 0, 0) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
 }
-
-@box from (0.0625, 0.0, 0.0625) to (0.1625, 0.0625, 0.1625) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, north, west, south) region (0.0078, 0, 0.01, 0) region-scale (1.0, 1.0)
+@bone move (0.125, -0.1875, 0.875) {
+    @box from (-0.0625, 0.21875, -0.8125) to (0.5, 0.46875, 0.0625) origin (0.375, 0.1875, -0.375) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.4375, 0.6875, 0.71875, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.5625, 0, 1, 0.125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.71875, 0.6875, 1, 0.8125)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.125, 0.5625, 0.25)
+        @part tags (top) texture "blocks:ibm_xt" region (0.71875, 0.6875, 0.4375, 0.25)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.25, 0.71875, 0.6875)
+    }
+    @box from (0, 0.1875, -0.0625) to (0.0625, 0.21875, 0) origin (0.375, 0.1875, -0.375) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.796875)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (0.375, 0.1875, -0.0625) to (0.4375, 0.21875, 0) origin (0.375, 0.1875, -0.375) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (0, 0.1875, -0.75) to (0.0625, 0.21875, -0.6875) origin (0.375, 0.1875, -0.375) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.796875, 0.96875, 0.8125)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
+    @box from (0.375, 0.1875, -0.75) to (0.4375, 0.21875, -0.6875) origin (0.375, 0.1875, -0.375) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.796875, 1, 0.8125)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.78125, 1, 0.796875)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.796875)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.78125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.78125, 0.96875, 0.8125)
+    }
 }
-
-@box from (0.0625, 0.0, 0.5625) to (0.1625, 0.0625, 0.6625) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, north, west, south) region (0.0078, 0, 0.01, 0) region-scale (1.0, 1.0)
-}
-
-@box from (0.84, 0.0, 0.0625) to (0.94, 0.0625, 0.1625) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, north, west, south) region (0.0078, 0, 0.01, 0) region-scale (1.0, 1.0)
-}
-
-@box from (0.84, 0.0, 0.5625) to (0.94, 0.0625, 0.6625) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, north, west, south) region (0.0078, 0, 0.01, 0) region-scale (1.0, 1.0)
-}
-
-# Monitor
-@box from (0.2, 0.36, 0.05) to (0.8, 0.86, 0.65) texture "blocks:ibm_xt" {
-    @part tags(top, bottom, east, west, south) region (0, 0.9921875, 0, 1) region-scale (1.0, 1.0)
-    @part tags (north) region (0, 0, 1, 1) region-scale (1.0, 0.98449612403)
+@bone move (0.6875, 0, 1) {
+    @box from (0, 0, -0.875) to (0.25, 0.0625, -0.125) origin (-0.1875, 0, -0.5) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.25, 0.90625, 0.375, 0.9375)
+        @part tags (west) texture "blocks:ibm_xt" region (0.25, 0.96875, 0.625, 1)
+        @part tags (north) texture "blocks:ibm_xt" region (0.25, 0.875, 0.375, 0.90625)
+        @part tags (east) texture "blocks:ibm_xt" region (0.625, 0.9375, 0.25, 0.96875)
+        @part tags (top) texture "blocks:ibm_xt" region (0, 0.625, 0.125, 1)
+        @part tags (bottom) texture "blocks:ibm_xt" region (0.125, 0.625, 0.25, 1)
+    }
+    @box from (-0.03125, 0, -0.1875) to (0, 0.03125, -0.03125) origin (-0.1875, 0, -0.5) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.8125, 1, 0.828125)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.828125, 0.96875, 0.84375)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.84375, 0.96875, 0.8125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.84375)
+    }
+    @box from (-0.65625, 0, -0.21875) to (-0.625, 0.03125, -0.0625) origin (-0.1875, 0, -0.5) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.8125, 1, 0.828125)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.828125, 0.96875, 0.84375)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.84375, 0.96875, 0.8125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.84375)
+    }
+    @box from (-0.65625, 0, -0.25) to (-0.625, 0.15625, -0.21875) origin (-0.1875, 0, -0.5) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.8125, 1, 0.828125)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.828125, 0.96875, 0.84375)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.84375, 0.96875, 0.8125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.84375)
+    }
+    @box from (-0.03125, 0, -0.0625) to (-0.65625, 0.03125, -0.03125) origin (-0.1875, 0, -0.5) rotate (0, -0.707106781187, 0, 0.707106781187) {
+        @part tags (south) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (west) texture "blocks:ibm_xt" region (0.96875, 0.828125, 1, 0.84375)
+        @part tags (north) texture "blocks:ibm_xt" region (0.96875, 0.8125, 1, 0.828125)
+        @part tags (east) texture "blocks:ibm_xt" region (1, 0.828125, 0.96875, 0.84375)
+        @part tags (top) texture "blocks:ibm_xt" region (1, 0.84375, 0.96875, 0.8125)
+        @part tags (bottom) texture "blocks:ibm_xt" region (1, 0.8125, 0.96875, 0.84375)
+    }
 }
