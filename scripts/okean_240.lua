@@ -16,5 +16,9 @@ function on_interact(x, y, z, pid)
 end
 
 function on_breaking(x, y, z, pid)
-    vmmanager.delete_machine(block.get_field(x, y, z, "vm_id"))
+    local machine_id = block.get_field(x, y, z, "vm_id")
+
+    if machine_id then
+        vmmanager.delete_machine(machine_id)
+    end
 end
