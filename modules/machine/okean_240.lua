@@ -112,19 +112,6 @@ local function write_memory_block(ram, offset, data)
 end
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- PPI 1
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-local function port_b_read(self)
-    return function(handler, val)
-        return bor(
-            lshift(self.devices.tdc:read_bit(0), 2),
-            lshift(self.devices.tdc:get_high(), 3)
-        )
-    end
-end
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- PPI 2
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -222,7 +209,6 @@ function machine.new(machine_id)
     self.devices.videocard = device_manager.create("okean", self.devices.cpu, self.devices.screen)
     self.devices.keyboard = device_manager.create("keyboard_okean", self.devices.cpu, self.devices.pic, self)
     self.devices.pc_speaker = device_manager.create("pc_speaker", self.devices.pit, self.devices.cpu)
-    self.devices.ppi_1 = device_manager.create("i8255", self.devices.cpu, 0x40)
     self.devices.ppi_2 = device_manager.create("i8255", self.devices.cpu, 0xC0)
     self.devices.ppi_3 = device_manager.create("i8255", self.devices.cpu, 0xE0)
 
@@ -263,7 +249,7 @@ function machine.new(machine_id)
     local cpu = self.devices.cpu
 
     cpu:set_reset_vector(0xE000)
-    cpu:get_scheduler().USEC = CPU_FREQ / 1000000
+    cpu:get_scheduler().NANOSECOND = CPU_FREQ / 1000000
 
     -- Setup PIT
     self.devices.pit:set_channel_out_handler(0, function(out, old_out)
