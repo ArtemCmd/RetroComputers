@@ -119,7 +119,9 @@ function manager.create_items()
                 pack_id, disks = next(data, pack_id)
 
                 if pack_id and disks then
-                    step()
+                    time.post_runnable(function()
+                        step()
+                    end)
                 end
             end)
         end
