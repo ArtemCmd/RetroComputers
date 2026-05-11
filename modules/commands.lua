@@ -8,7 +8,7 @@ local function print_machine_info(machine)
     console.log("Machine:")
     console.log("   ID = " .. tostring(machine:get_id()))
     console.log("   Enabled = " .. tostring(machine:is_running()))
-    console.log("   Focused = " .. tostring(machine.is_focused))
+    console.log("   Paused = " .. tostring(machine:is_paused()))
     console.log("Installed devices:")
 
     for name, _ in pairs(machine:get_devices()) do
@@ -60,6 +60,26 @@ function commands.initialize()
         end
 
         console.log("Removed " .. count .. " machines")
+    end)
+
+    console.add_command("retro_computers.vmmanager.pause machine_id:int", "Pause the machine", function(args, kwargs)
+        local machine = vmmanager.get_machine_by_id(args[1])
+
+        if not machine then
+            return "Machine not found"
+        end
+
+        machine:pause()
+    end)
+
+    console.add_command("retro_computers.vmmanager.resume machine_id:int", "Resume the machine", function(args, kwargs)
+        local machine = vmmanager.get_machine_by_id(args[1])
+
+        if not machine then
+            return "Machine not found"
+        end
+
+        machine:resume()
     end)
 
     -- Config
@@ -151,14 +171,12 @@ function commands.initialize()
 
         serial:set_port_handler(args[2], {
             write = function(_, val)
-                buffer[#buffer+1] = string.char(val)
-
                 if val == string.byte("\n") then
                     console.chat(table.concat(buffer))
                     buffer = {}
+                else
+                    buffer[#buffer+1] = string.char(val)
                 end
-
-                console.chat(string.char(val))
             end
         })
     end)
@@ -177,6 +195,23 @@ function commands.initialize()
         end
 
         serial:write(args[2], args[3])
+    end)
+
+    -- Debug
+    console.add_command("retro_computers.debug.cpu.dump machine_id:int", "Dump CPU state", function(args, kwargs)
+        local machine = vmmanager.get_machine_by_id(args[1])
+
+        if not machine then
+            return "Machine not found"
+        end
+
+        local cpu = machine:get_device("cpu")
+
+        if not cpu then
+            return "CPU not found"
+        end
+
+        return cpu:dump()
     end)
 end
 

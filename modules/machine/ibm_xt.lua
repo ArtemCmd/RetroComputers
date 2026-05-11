@@ -119,6 +119,8 @@ local function start(self)
         util.load_roms("ibm_xt", self.devices.memory)
 
         self.enabled = true
+        self.paused = false
+
         events.emit("retro_computers:machine.started", self)
     end
 end
@@ -132,6 +134,7 @@ end
 local function stop(self)
     if self.enabled then
         self.enabled = false
+        self.paused = false
         self:reset()
         events.emit("retro_computers:machine.stopped", self)
     end
@@ -225,7 +228,7 @@ function machine.new(id)
         devices = {},
         floppy = {},
         enabled = false,
-        is_focused = false,
+        paused = false,
         id = id,
         start = start,
         stop = stop,

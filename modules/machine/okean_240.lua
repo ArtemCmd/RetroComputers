@@ -162,12 +162,14 @@ local function start(self)
         write_memory_block(self.devices.memory.ram_os, 0x0000, BIOS_ROM)
 
         self.enabled = true
+        self.paused = false
     end
 end
 
 local function stop(self)
     if self.enabled then
         self.enabled = false
+        self.paused = false
         self:reset()
     end
 end
@@ -193,7 +195,7 @@ function machine.new(machine_id)
         id = machine_id,
         target_time = 0,
         enabled = false,
-        is_focused = false,
+        paused = false,
         start = start,
         stop = stop,
         update = update
