@@ -2,7 +2,7 @@
     <container id='screen' size='640, 200' color='#000000FF'>
         <image id='screen_graphics' src='gui/screen' size='640, 200' region='0.0, 1.0, 1.0, 0.0'/>
         <container id='screen_animation' size='640, 200' z-index='999' color='#000000FF'/>
-        <label id='fps_counter' z-index='9999' color='#FF0000FF'>FPS: 0</label>
+        <label id='fps_counter' z-index='9999' color='#FF0000FF' visible='false'>FPS: 0</label>
     </container>
 
     <container id='control_panel' pos='0, 600' size='535,30' color='#222121'>

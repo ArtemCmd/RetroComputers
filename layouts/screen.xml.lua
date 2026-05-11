@@ -3,7 +3,7 @@ local config = require("retro_computers:config")
 local input_manager = require("retro_computers:input_manager")
 local vmmanager = require("retro_computers:vmmanager")
 
-local band, bor, rshift, lshift, bxor, bnot = bit.band, bit.bor, bit.rshift, bit.lshift, bit.bxor, bit.bnot
+local bor = bit.bor
 
 -- Screen
 local screen_width = 0
@@ -17,7 +17,6 @@ local alpha_animation = 255
 local initialized = false
 
 -- Debug
-local last_time = 0
 local fps = 0
 
 -- Machine
@@ -98,6 +97,11 @@ local char2key = {
 
 local canvas = Canvas({640, 200})
 
+local function update_fps_counter()
+    document.fps_counter.text = string.format("FPS: %d", fps)
+    fps = 0
+end
+
 local function update()
     if start_animation then
         local animation = document.screen_animation
@@ -121,15 +125,8 @@ local function refresh(screen)
 end
 
 local function refresh_debug(screen)
-    if (os.clock() - last_time) >= 1.0 then
-        document.fps_counter.text = string.format("FPS: %d", fps)
-        fps = 0
-        last_time = os.clock()
-    end
-
     canvas:set_data(screen.buffer)
     canvas:update()
-
     fps = fps + 1
 end
 
@@ -171,7 +168,12 @@ local function set_resolution(width, height, scale_x, scale_y)
 end
 
 local function send_key(key)
-    local scancode = input_manager.get_scancode(key) or 0x00
+    local scancode = input_manager.get_scancode(key)
+
+    if not scancode then
+        return
+    end
+
 ---@diagnostic disable-next-line: need-check-nil, undefined-field
     local keyboard = machine:get_device("keyboard")
 
@@ -247,10 +249,9 @@ function on_open(_, x, y, z)
         initialized = true
 
         if config.debug.show_fps then
+            document.screen:setInterval(1000, update_fps_counter)
             document.fps_counter.visible = true
             refresh = refresh_debug
-        else
-            document.fps_counter.visible = false
         end
 
         events.on("dave_keyboard:keyboard.close", function()
